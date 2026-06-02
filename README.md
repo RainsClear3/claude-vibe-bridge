@@ -1,16 +1,16 @@
 # Claude Vibe Bridge
 
-A mobile-first PWA that bridges web browsers to Claude Code CLI via WebSocket, enabling AI-powered coding from your phone.
+A mobile-first PWA that bridges web browsers to Claude Desktop via WebSocket, enabling AI-powered coding from your phone.
 
 ## Architecture
 
 ```
-Phone/Browser  ──WebSocket──>  Server (Express)  ──CLI spawn──>  Claude Code
-   (PWA)         streaming         (port 3900)       stdin/out      CLI
+Phone/Browser  ──WebSocket──>  Server (Express)  ──spawn──>  Claude Desktop CLI
+   (PWA)         streaming         (port 3900)      stdin/out      (claude.exe)
 ```
 
 - **client** — Vanilla TypeScript PWA with Vite (no framework)
-- **server** — Express + WebSocket server, spawns Claude Code CLI processes
+- **server** — Express + WebSocket server, spawns Claude Desktop's CLI process
 - **shared** — Protocol types, session models, Anthropic API types
 
 ## Quick Start
@@ -39,7 +39,7 @@ npm run dev:server     # server serves client/dist on port 3900
 
 - **Real-time streaming** — thinking blocks, text, tool use/results arrive live
 - **Thread-based sessions** — multiple conversations with persistent history
-- **Tool approval flow** — approve or deny CLI tool executions from the browser
+- **Tool approval flow** — approve or deny tool executions from the browser
 - **5 themes** — Deep Sea (default), Light, Cyberpunk, Minimal, Forest
 - **PWA** — installable on mobile, service worker for offline shell
 - **Responsive** — mobile sidebar overlay, safe area insets
