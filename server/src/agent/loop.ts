@@ -1,5 +1,5 @@
 // Core Agent Loop: streaming API call → tool dispatch → loop
-// This is the heart of Vibe Bridge
+// This is the heart of Claude Vibe Bridge
 
 import { v4 as uuid } from 'uuid';
 import type { Thread, Turn, Item, ServerMessage, MessageParam, ContentBlock, ToolUseBlock } from '@vibe-bridge/shared';

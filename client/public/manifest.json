@@ -1,6 +1,6 @@
 {
-  "name": "Vibe Bridge",
-  "short_name": "Vibe",
+  "name": "Claude Vibe Bridge",
+  "short_name": "CVB",
   "description": "Mobile AI coding powered by Claude",
   "start_url": "/",
   "display": "standalone",

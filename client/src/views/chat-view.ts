@@ -29,7 +29,7 @@ function updateMessages(): void {
   if (!thread || thread.turns.length === 0) {
     messagesDiv.innerHTML = `
       <div class="empty-state">
-        <p>Vibe Bridge</p>
+        <p>Claude Vibe Bridge</p>
         <p style="margin-top:8px;font-size:13px">在下方输入 coding 任务，Claude 会在电脑上执行</p>
       </div>
     `;

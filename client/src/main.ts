@@ -1,4 +1,4 @@
-// Vibe Bridge PWA - Entry Point
+// Claude Vibe Bridge PWA - Entry Point
 
 import { WsClient } from './services/ws-client.js';
 import { store } from './state/store.js';

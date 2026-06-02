@@ -59,24 +59,24 @@ async function main() {
 
   server.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
-      console.error(`[Vibe Bridge] Port ${config.port} is already in use. Kill the existing process first:`);
+      console.error(`[Claude Vibe Bridge] Port ${config.port} is already in use. Kill the existing process first:`);
       console.error(`  netstat -ano | findstr :${config.port}`);
       console.error(`  taskkill /F /PID <PID>`);
     } else {
-      console.error('[Vibe Bridge] Server error:', err.message);
+      console.error('[Claude Vibe Bridge] Server error:', err.message);
     }
     process.exit(1);
   });
 
   server.listen(config.port, '0.0.0.0', () => {
-    console.log(`[Vibe Bridge] Server running on http://0.0.0.0:${config.port}`);
-    console.log(`[Vibe Bridge] Mode: Transparent bridge to Claude Desktop 3P`);
-    console.log(`[Vibe Bridge] Allowed dirs: ${config.allowedDirs.join(', ')}`);
-    console.log(`[Vibe Bridge] Open on phone: http://<your-ip>:${config.port}`);
+    console.log(`[Claude Vibe Bridge] Server running on http://0.0.0.0:${config.port}`);
+    console.log(`[Claude Vibe Bridge] Mode: Transparent bridge to Claude Desktop 3P`);
+    console.log(`[Claude Vibe Bridge] Allowed dirs: ${config.allowedDirs.join(', ')}`);
+    console.log(`[Claude Vibe Bridge] Open on phone: http://<your-ip>:${config.port}`);
   });
 }
 
 main().catch(err => {
-  console.error('[Vibe Bridge] Fatal:', err);
+  console.error('[Claude Vibe Bridge] Fatal:', err);
   process.exit(1);
 });
