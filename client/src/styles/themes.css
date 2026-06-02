@@ -1,0 +1,104 @@
+/* ============================================
+   Theme Definitions
+   Each theme overrides CSS variables from variables.css
+   ============================================ */
+
+/* === Light (日光) === */
+[data-theme="light"] {
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e8eaed;
+  --bg-surface: #ffffff;
+  --bg-input: #f0f0f2;
+
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-muted: #aeaeb2;
+
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --success: #34c759;
+  --warning: #ff9500;
+  --error: #ff3b30;
+
+  --tool-bg: #f5f5f7;
+  --tool-border: #d2d2d7;
+  --diff-add: #d4edda;
+  --diff-remove: #f8d7da;
+}
+
+/* === Cyberpunk (赛博朋克) === */
+[data-theme="cyberpunk"] {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-tertiary: #1a0a2e;
+  --bg-surface: #141422;
+  --bg-input: #1c1c30;
+
+  --text-primary: #e0e0ff;
+  --text-secondary: #9090b0;
+  --text-muted: #5050a0;
+
+  --accent: #ff0066;
+  --accent-hover: #ff3388;
+  --success: #00ff88;
+  --warning: #ffcc00;
+  --error: #ff0044;
+
+  --tool-bg: #0f0f20;
+  --tool-border: #330066;
+  --diff-add: #002211;
+  --diff-remove: #220011;
+}
+
+/* === Minimal (极简) === */
+[data-theme="minimal"] {
+  --bg-primary: #fafafa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f0f0f0;
+  --bg-surface: #ffffff;
+  --bg-input: #fafafa;
+
+  --text-primary: #222222;
+  --text-secondary: #666666;
+  --text-muted: #aaaaaa;
+
+  --accent: #222222;
+  --accent-hover: #444444;
+  --success: #22863a;
+  --warning: #e36209;
+  --error: #d73a49;
+
+  --tool-bg: #f6f6f6;
+  --tool-border: #e1e1e1;
+  --diff-add: #f0fff0;
+  --diff-remove: #fff0f0;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+/* === Forest (森林) === */
+[data-theme="forest"] {
+  --bg-primary: #1a2318;
+  --bg-secondary: #1e2b1c;
+  --bg-tertiary: #2a3d27;
+  --bg-surface: #232f20;
+  --bg-input: #2a3a28;
+
+  --text-primary: #d4e0cf;
+  --text-secondary: #96ad8e;
+  --text-muted: #5e7356;
+
+  --accent: #7cb342;
+  --accent-hover: #9ccc65;
+  --success: #66bb6a;
+  --warning: #ffb74d;
+  --error: #ef5350;
+
+  --tool-bg: #1c2619;
+  --tool-border: #3a5235;
+  --diff-add: #1a3318;
+  --diff-remove: #331a1a;
+}

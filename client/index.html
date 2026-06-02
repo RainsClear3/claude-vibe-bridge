@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="manifest" href="/manifest.json">
+  <title>Vibe Bridge</title>
+  <link rel="stylesheet" href="/src/styles/variables.css">
+  <link rel="stylesheet" href="/src/styles/themes.css">
+  <link rel="stylesheet" href="/src/styles/app.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar: Thread list (hidden by default on mobile) -->
+    <div id="sidebar" class="sidebar">
+      <div id="sidebar-header">
+        <span class="sidebar-title">Vibe Bridge</span>
+        <button id="new-session-btn" title="新会话">+</button>
+      </div>
+      <div id="thread-list"></div>
+    </div>
+
+    <!-- Main area -->
+    <div id="main-area">
+      <div id="status-bar">
+        <button id="sidebar-toggle" title="会话列表">☰</button>
+      </div>
+      <div id="chat-container">
+        <div id="messages"></div>
+      </div>
+      <div id="input-bar"></div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
