@@ -18,6 +18,12 @@ Phone/Browser ──WebSocket──> Server (Express) ──spawn──> claude.
 - Sessions are stored in Claude Desktop's own session directory — no data duplication
 - **No API key needed** — authentication is handled by Claude Desktop itself
 
+## Screenshots
+
+| Server Configuration | Session List | Chat Interface |
+|:---:|:---:|:---:|
+| ![Server Configuration](png/服务器配置.png) | ![Session List](png/会话栏.png) | ![Chat](png/对话.png) |
+
 ## Prerequisites
 
 - **Windows** with [Claude Desktop](https://claude.ai/download) installed

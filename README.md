@@ -18,6 +18,12 @@
 - 会话存储在 Claude Desktop 自己的会话目录中 —— 不重复存储数据
 - **不需要 API Key** —— 认证由 Claude Desktop 自身处理
 
+## 界面预览
+
+| 服务器配置 | 会话栏 | 对话界面 |
+|:---:|:---:|:---:|
+| ![服务器配置](png/服务器配置.png) | ![会话栏](png/会话栏.png) | ![对话](png/对话.png) |
+
 ## 前提条件
 
 - **Windows** 系统，已安装 [Claude Desktop](https://claude.ai/download)
