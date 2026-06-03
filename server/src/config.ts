@@ -56,7 +56,7 @@ export const config = {
   port: parseInt(process.env.PORT || '3900', 10),
 
   // Security
-  allowedDirs: (process.env.ALLOWED_DIRS || 'E:\\claude')
+  allowedDirs: (process.env.ALLOWED_DIRS || `${process.env.USERPROFILE || 'C:\\'}`)
     .split('|')
     .map(d => d.trim()),
   

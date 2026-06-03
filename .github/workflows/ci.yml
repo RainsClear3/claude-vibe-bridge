@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Build shared types
+        run: npx tsc -p shared/tsconfig.json
+
+      - name: Type-check server
+        run: npx tsc --noEmit -p server/tsconfig.json
+
+      - name: Build client
+        run: cd client && npx vite build
+
+      - name: Verify client output
+        run: test -f client/dist/index.html

@@ -1,78 +1,112 @@
 # Claude Vibe Bridge
 
-A mobile-first PWA that bridges web browsers to Claude Desktop via WebSocket, enabling AI-powered coding from your phone.
+A web-based interface for **Claude Desktop 3P (Third-party API mode)** on Windows. Control Claude Desktop's coding agent from your phone or any browser, with real-time streaming responses and tool approval flow.
 
-## Architecture
+> **What is Claude Desktop 3P?** Claude Desktop has a "third-party API" mode that exposes a CLI (`claude.exe`) with streaming JSON output. This project wraps that CLI in a web server + PWA, so you can chat with Claude's coding agent from your phone while it works on your PC.
+
+## How It Works
 
 ```
-Phone/Browser  ──WebSocket──>  Server (Express)  ──spawn──>  Claude Desktop CLI
-   (PWA)         streaming         (port 3900)      stdin/out      (claude.exe)
+Phone/Browser ──WebSocket──> Server (Express) ──spawn──> claude.exe (Claude Desktop 3P)
+   (PWA)        streaming       (port 3900)    stdin/out     (coding agent)
 ```
 
-- **client** — Vanilla TypeScript PWA with Vite (no framework)
-- **server** — Express + WebSocket server, spawns Claude Desktop's CLI process
-- **shared** — Protocol types, session models, Anthropic API types
+- The **server** spawns `claude.exe` with `--output-format stream-json` and relays messages over WebSocket
+- The **client** is a PWA that renders the conversation in real-time
+- Sessions are stored in Claude Desktop's own session directory — no data duplication
+- **No API key needed** — authentication is handled by Claude Desktop itself
+
+## Prerequisites
+
+- **Windows** with [Claude Desktop](https://claude.ai/download) installed
+- Claude Desktop must have **3P mode enabled** (Settings > Developer > Third-party API)
+- **Node.js 18+**
 
 ## Quick Start
 
 ```bash
-# Install dependencies
+# 1. Install dependencies
 npm install
 
-# Start server (port 3900)
-npm run dev:server
+# 2. Configure (copy and edit)
+cp .env.example .env
 
-# Start client dev server (port 3901, proxies /ws to 3900)
-npm run dev:client
+# 3. Start
+npm run dev:server    # Server on http://localhost:3900
 ```
 
-Open `http://localhost:3901` in your browser.
+Open `http://localhost:3900` in any browser. The server auto-discovers your Claude Desktop installation.
 
-### Production
+### Build for production
 
 ```bash
-npm run build:client   # builds to client/dist
-npm run dev:server     # server serves client/dist on port 3900
+cd client && npx vite build    # builds to client/dist
+cd .. && npx tsx server/src/index.ts    # server serves client/dist
 ```
+
+## Configuration
+
+All configuration is in `.env` (see `.env.example`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AUTH_ENABLED` | `false` | Enable HTTP Basic Auth |
+| `AUTH_USERNAME` | | Login username |
+| `AUTH_PASSWORD` | | Login password |
+| `PORT` | `3900` | Server port |
+| `ALLOWED_DIRS` | `%USERPROFILE%` | Pipe-separated directories the agent can access |
+| `CLAUDE_DESKTOP_USER_ID` | auto-discovered | Override if multiple accounts exist |
+| `CLAUDE_DESKTOP_APP_ID` | auto-discovered | Override if multiple accounts exist |
+
+> Claude Desktop paths (user ID, app ID, CLI location) are **auto-discovered** at startup. Manual configuration is rarely needed.
 
 ## Features
 
 - **Real-time streaming** — thinking blocks, text, tool use/results arrive live
-- **Thread-based sessions** — multiple conversations with persistent history
-- **Tool approval flow** — approve or deny tool executions from the browser
-- **5 themes** — Deep Sea (default), Light, Cyberpunk, Minimal, Forest
-- **PWA** — installable on mobile, service worker for offline shell
-- **Responsive** — mobile sidebar overlay, safe area insets
+- **Thread-based sessions** — resumes existing Claude Desktop conversations
+- **Tool approval** — optionally require browser approval for file writes and commands
+- **Model & effort selector** — switch between Opus/Sonnet/Haiku and effort levels
+- **Markdown rendering** — tables, code blocks, headers, lists, links
+- **5 themes** — Deep Sea, Light, Cyberpunk, Minimal, Forest
+- **PWA** — installable on mobile, works as a standalone app
+- **Authentication** — HTTP Basic Auth for both HTTP and WebSocket
+- **Skill support** — type `/skill-name` to inject Claude Desktop skills
+- **Android app** — Capacitor wrapper for native Android (see `android/`)
 
-## Configuration
+## Android App
 
-Create a `.env` file in the project root:
+The project includes a Capacitor-based Android app:
 
-```env
-ANTHROPIC_API_KEY=sk-ant-...
+```bash
+cd client && npx vite build    # Build web assets
+npx cap sync android           # Sync to Android project
+# Open android/ in Android Studio to build APK
 ```
 
-Server config (port, allowed directories, default model) is in `server/src/config.ts`.
+The Android app auto-detects the server URL. For remote servers, it shows a configuration screen on first launch.
+
+## Network Access (ngrok / frp)
+
+To access from outside your local network, see `frp/ngrok.md` or `frp/DEPLOY.md` for tunneling setup with ngrok, frp, or natapp.
 
 ## Project Structure
 
 ```
-├── client/
-│   ├── src/
-│   │   ├── components/     # status-bar, input-bar
-│   │   ├── views/          # chat-view, thread-list
-│   │   ├── state/          # reactive store
-│   │   ├── services/       # WebSocket client
-│   │   └── styles/         # CSS variables, themes
-│   └── public/             # manifest, service worker, logo
-├── server/
+├── client/          # Vanilla TypeScript PWA (Vite)
 │   └── src/
-│       ├── agent/          # CLI runner, executor, tool definitions
-│       ├── api/            # Anthropic client (direct API)
-│       ├── session/        # thread/turn persistence
-│       └── ws/             # WebSocket handler, broadcast
-└── shared/
-    └── src/                # protocol, session types, API models
+│       ├── components/    # status-bar, input-bar
+│       ├── views/         # chat-view, thread-list
+│       ├── state/         # reactive store
+│       ├── services/      # WebSocket client
+│       └── styles/        # CSS themes
+├── server/          # Express + WebSocket server
+│   └── src/
+│       ├── agent/         # CLI runner (spawns claude.exe)
+│       ├── session/       # thread persistence
+│       └── ws/            # WebSocket handler
+├── shared/          # Protocol & session types
+├── android/         # Capacitor Android project
+└── frp/             # Network tunneling guides
 ```
 
 ## License

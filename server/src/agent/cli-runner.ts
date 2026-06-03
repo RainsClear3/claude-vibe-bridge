@@ -93,7 +93,7 @@ function findCliCwd(targetCwd: string): string {
   if (targetCwd && fs.existsSync(targetCwd)) {
     return path.resolve(targetCwd);
   }
-  return process.env.USERPROFILE || 'E:\\claude';
+  return process.env.USERPROFILE || 'C:\\';
 }
 
 export interface CliRunnerParams {

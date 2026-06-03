@@ -95,7 +95,7 @@ function parseJsonlToThread(meta: ClaudeSessionMeta, jsonlPath: string): Thread 
   const thread: Thread = {
     id: meta.sessionId,
     title: meta.title || '(untitled)',
-    cwd: meta.cwd || 'E:\\claude',
+    cwd: meta.cwd || process.env.USERPROFILE || 'C:\\',
     model: meta.model || 'unknown',
     createdAt: meta.createdAt,
     lastActivityAt: meta.lastActivityAt || meta.createdAt,
@@ -230,7 +230,7 @@ export class SessionManager {
           const thread: Thread = {
             id: meta.sessionId,
             title: meta.title || '(untitled)',
-            cwd: meta.cwd || 'E:\\claude',
+            cwd: meta.cwd || process.env.USERPROFILE || 'C:\\',
             model: meta.model || 'unknown',
             createdAt: meta.createdAt,
             lastActivityAt: meta.lastActivityAt || meta.createdAt,
