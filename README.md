@@ -1,112 +1,114 @@
 # Claude Vibe Bridge
 
-A web-based interface for **Claude Desktop 3P (Third-party API mode)** on Windows. Control Claude Desktop's coding agent from your phone or any browser, with real-time streaming responses and tool approval flow.
+[English](README_EN.md)
 
-> **What is Claude Desktop 3P?** Claude Desktop has a "third-party API" mode that exposes a CLI (`claude.exe`) with streaming JSON output. This project wraps that CLI in a web server + PWA, so you can chat with Claude's coding agent from your phone while it works on your PC.
+> 基于 **Claude Desktop 3P（第三方 API 模式）** 的 Web 界面。通过手机或浏览器远程操控 PC 上的 Claude Desktop 编程代理，支持实时流式响应和工具审批。
 
-## How It Works
+**Claude Desktop 3P 是什么？** Claude Desktop 有一个"第三方 API"模式，暴露 `claude.exe` CLI 并支持流式 JSON 输出。本项目将这个 CLI 包装成 Web 服务器 + PWA，让你用手机和 Claude 的编程代理对话，同时它在你的 PC 上工作。
+
+## 架构
 
 ```
-Phone/Browser ──WebSocket──> Server (Express) ──spawn──> claude.exe (Claude Desktop 3P)
-   (PWA)        streaming       (port 3900)    stdin/out     (coding agent)
+手机/浏览器 ──WebSocket──> 服务端 (Express) ──spawn──> claude.exe (Claude Desktop 3P)
+   (PWA)        流式传输       (端口 3900)    stdin/out      (编程代理)
 ```
 
-- The **server** spawns `claude.exe` with `--output-format stream-json` and relays messages over WebSocket
-- The **client** is a PWA that renders the conversation in real-time
-- Sessions are stored in Claude Desktop's own session directory — no data duplication
-- **No API key needed** — authentication is handled by Claude Desktop itself
+- **服务端** 使用 `--output-format stream-json` 启动 `claude.exe`，通过 WebSocket 中继消息
+- **客户端** 是一个实时渲染对话的 PWA
+- 会话存储在 Claude Desktop 自己的会话目录中 —— 不重复存储数据
+- **不需要 API Key** —— 认证由 Claude Desktop 自身处理
 
-## Prerequisites
+## 前提条件
 
-- **Windows** with [Claude Desktop](https://claude.ai/download) installed
-- Claude Desktop must have **3P mode enabled** (Settings > Developer > Third-party API)
+- **Windows** 系统，已安装 [Claude Desktop](https://claude.ai/download)
+- Claude Desktop 需要启用 **3P 模式**（设置 > 开发者 > 第三方 API）
 - **Node.js 18+**
 
-## Quick Start
+## 快速开始
 
 ```bash
-# 1. Install dependencies
+# 1. 安装依赖
 npm install
 
-# 2. Configure (copy and edit)
+# 2. 配置（复制并编辑）
 cp .env.example .env
 
-# 3. Start
-npm run dev:server    # Server on http://localhost:3900
+# 3. 启动
+npm run dev:server    # 服务端运行在 http://localhost:3900
 ```
 
-Open `http://localhost:3900` in any browser. The server auto-discovers your Claude Desktop installation.
+在任意浏览器中打开 `http://localhost:3900`。服务端会自动发现你的 Claude Desktop 安装。
 
-### Build for production
+### 生产构建
 
 ```bash
-cd client && npx vite build    # builds to client/dist
-cd .. && npx tsx server/src/index.ts    # server serves client/dist
+cd client && npx vite build    # 构建到 client/dist
+cd .. && npx tsx server/src/index.ts    # 服务端托管 client/dist
 ```
 
-## Configuration
+## 配置
 
-All configuration is in `.env` (see `.env.example`):
+所有配置都在 `.env` 文件中（参见 `.env.example`）：
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `AUTH_ENABLED` | `false` | Enable HTTP Basic Auth |
-| `AUTH_USERNAME` | | Login username |
-| `AUTH_PASSWORD` | | Login password |
-| `PORT` | `3900` | Server port |
-| `ALLOWED_DIRS` | `%USERPROFILE%` | Pipe-separated directories the agent can access |
-| `CLAUDE_DESKTOP_USER_ID` | auto-discovered | Override if multiple accounts exist |
-| `CLAUDE_DESKTOP_APP_ID` | auto-discovered | Override if multiple accounts exist |
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `AUTH_ENABLED` | `false` | 启用 HTTP Basic Auth 认证 |
+| `AUTH_USERNAME` | | 登录用户名 |
+| `AUTH_PASSWORD` | | 登录密码 |
+| `PORT` | `3900` | 服务端口 |
+| `ALLOWED_DIRS` | `%USERPROFILE%` | 代理可访问的目录（用 `\|` 分隔多个） |
+| `CLAUDE_DESKTOP_USER_ID` | 自动发现 | 多账户时手动指定 |
+| `CLAUDE_DESKTOP_APP_ID` | 自动发现 | 多账户时手动指定 |
 
-> Claude Desktop paths (user ID, app ID, CLI location) are **auto-discovered** at startup. Manual configuration is rarely needed.
+> Claude Desktop 路径（用户 ID、应用 ID、CLI 位置）**启动时自动发现**，通常不需要手动配置。
 
-## Features
+## 功能
 
-- **Real-time streaming** — thinking blocks, text, tool use/results arrive live
-- **Thread-based sessions** — resumes existing Claude Desktop conversations
-- **Tool approval** — optionally require browser approval for file writes and commands
-- **Model & effort selector** — switch between Opus/Sonnet/Haiku and effort levels
-- **Markdown rendering** — tables, code blocks, headers, lists, links
-- **5 themes** — Deep Sea, Light, Cyberpunk, Minimal, Forest
-- **PWA** — installable on mobile, works as a standalone app
-- **Authentication** — HTTP Basic Auth for both HTTP and WebSocket
-- **Skill support** — type `/skill-name` to inject Claude Desktop skills
-- **Android app** — Capacitor wrapper for native Android (see `android/`)
+- **实时流式传输** —— thinking blocks、文本、工具调用/结果实时到达
+- **基于 Thread 的会话** —— 恢复已有的 Claude Desktop 对话
+- **工具审批** —— 可选地要求浏览器审批文件写入和命令执行
+- **模型和推理强度选择** —— 切换 Opus/Sonnet/Haiku 和推理强度
+- **Markdown 渲染** —— 表格、代码块、标题、列表、链接
+- **5 套主题** —— 深海、日光、赛博朋克、极简、森林
+- **PWA** —— 可安装到手机，作为独立应用使用
+- **认证** —— HTTP 和 WebSocket 均支持 HTTP Basic Auth
+- **Skill 支持** —— 输入 `/skill-name` 注入 Claude Desktop Skills
+- **Android 应用** —— Capacitor 封装的原生 Android（见 `android/`）
 
-## Android App
+## Android 应用
 
-The project includes a Capacitor-based Android app:
+项目包含基于 Capacitor 的 Android 应用：
 
 ```bash
-cd client && npx vite build    # Build web assets
-npx cap sync android           # Sync to Android project
-# Open android/ in Android Studio to build APK
+cd client && npx vite build    # 构建 Web 资源
+npx cap sync android           # 同步到 Android 项目
+# 在 Android Studio 中打开 android/ 目录构建 APK
 ```
 
-The Android app auto-detects the server URL. For remote servers, it shows a configuration screen on first launch.
+Android 应用会自动检测服务器地址。对于远程服务器，首次启动时会显示配置界面。
 
-## Network Access (ngrok / frp)
+## 公网访问（ngrok / frp）
 
-To access from outside your local network, see `frp/ngrok.md` or `frp/DEPLOY.md` for tunneling setup with ngrok, frp, or natapp.
+从外部网络访问，请参见 `frp/ngrok.md` 或 `frp/DEPLOY.md` 了解 ngrok、frp、natapp 的隧道设置。
 
-## Project Structure
+## 项目结构
 
 ```
-├── client/          # Vanilla TypeScript PWA (Vite)
+├── client/          # 原生 TypeScript PWA (Vite)
 │   └── src/
-│       ├── components/    # status-bar, input-bar
-│       ├── views/         # chat-view, thread-list
-│       ├── state/         # reactive store
-│       ├── services/      # WebSocket client
-│       └── styles/        # CSS themes
-├── server/          # Express + WebSocket server
+│       ├── components/    # 状态栏、输入栏
+│       ├── views/         # 聊天视图、会话列表
+│       ├── state/         # 响应式状态管理
+│       ├── services/      # WebSocket 客户端
+│       └── styles/        # CSS 主题
+├── server/          # Express + WebSocket 服务器
 │   └── src/
-│       ├── agent/         # CLI runner (spawns claude.exe)
-│       ├── session/       # thread persistence
-│       └── ws/            # WebSocket handler
-├── shared/          # Protocol & session types
-├── android/         # Capacitor Android project
-└── frp/             # Network tunneling guides
+│       ├── agent/         # CLI 运行器（启动 claude.exe）
+│       ├── session/       # 会话持久化
+│       └── ws/            # WebSocket 处理
+├── shared/          # 协议和会话类型
+├── android/         # Capacitor Android 项目
+└── frp/             # 网络隧道指南
 ```
 
 ## License
