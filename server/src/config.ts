@@ -55,9 +55,6 @@ export const config = {
   // Server
   port: parseInt(process.env.PORT || '3900', 10),
 
-  // Sessions
-  sessionDir: process.env.SESSION_DIR || './data/sessions',
-
   // Security
   allowedDirs: (process.env.ALLOWED_DIRS || 'E:\\claude')
     .split('|')
@@ -67,11 +64,6 @@ export const config = {
   authEnabled: process.env.AUTH_ENABLED?.toLowerCase() === 'true',
   authUsername: process.env.AUTH_USERNAME || '',
   authPassword: process.env.AUTH_PASSWORD || '',
-
-  // Agent
-  approvalMode: (process.env.APPROVAL_MODE || 'auto') as 'auto' | 'manual',
-  maxTokens: parseInt(process.env.MAX_TOKENS || '16384', 10),
-  maxTurns: 25, // Max tool use rounds per turn
 
   // Claude Desktop 3P paths (auto-discovered or .env override)
   claudeDesktopUserId: userId,

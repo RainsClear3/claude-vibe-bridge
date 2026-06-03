@@ -212,11 +212,7 @@ export class SessionManager {
   private historyLoaded = new Set<string>();
   private abortControllers = new Map<string, AbortController>();
   private pendingApprovals = new Map<string, PendingApproval>();
-  private sessionDir: string;
-
-  constructor(sessionDir: string) {
-    this.sessionDir = sessionDir;
-  }
+  constructor() {}
 
   async load(): Promise<void> {
     try {

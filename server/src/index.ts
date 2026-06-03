@@ -79,7 +79,7 @@ async function main() {
   });
 
   // Initialize session manager
-  const sessionManager = new SessionManager(config.sessionDir);
+  const sessionManager = new SessionManager();
   await sessionManager.load();
 
   // Setup WebSocket
