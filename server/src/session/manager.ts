@@ -5,6 +5,7 @@ import path from 'path';
 import os from 'os';
 import type { Thread, Turn, Item, ThreadSummary } from '@vibe-bridge/shared';
 import { broadcast } from '../ws/broadcast.js';
+import { config } from '../config.js';
 
 interface PendingApproval {
   resolve: (approved: boolean) => void;
@@ -29,8 +30,8 @@ interface ClaudeSessionMeta {
 const CLAUDE_SESSIONS_DIR = path.join(
   process.env.LOCALAPPDATA!,
   'Claude-3p', 'claude-code-sessions',
-  '57cbd131-529f-47ce-92e3-ff7e091ef616',
-  '00000000-0000-4000-8000-000000000001'
+  config.claudeDesktopUserId,
+  config.claudeDesktopAppId
 );
 
 const CLAUDE_PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');

@@ -54,7 +54,7 @@ export interface AppState {
   skills: SkillInfo[];
   selectedModel: string | null;
   selectedEffort: string | null;
-  selectedSkill: string | null;
+  selectedSkill: string;
   currentTheme: ThemeId;
 }
 

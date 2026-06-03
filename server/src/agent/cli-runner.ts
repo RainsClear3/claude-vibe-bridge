@@ -1,21 +1,41 @@
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuid } from 'uuid';
 import type { Thread, Turn, Item } from '@vibe-bridge/shared';
 import { broadcast } from '../ws/broadcast.js';
+import { config } from '../config.js';
 
-const CLI_PATH = path.join(
-  process.env.LOCALAPPDATA!,
-  'Claude-3p', 'claude-code', '2.1.149', 'claude.exe'
-);
+function findCliPath(): string {
+  const claudeCodeDir = path.join(
+    process.env.LOCALAPPDATA!,
+    'Claude-3p', 'claude-code'
+  );
+  try {
+    const versions = fs.readdirSync(claudeCodeDir)
+      .filter(d => fs.existsSync(path.join(claudeCodeDir, d, 'claude.exe')))
+      .sort();
+    if (versions.length > 0) {
+      const latest = versions[versions.length - 1];
+      const cliPath = path.join(claudeCodeDir, latest, 'claude.exe');
+      console.log(`[CLI] Found claude.exe v${latest} at ${cliPath}`);
+      return cliPath;
+    }
+  } catch {}
+  // Last resort: try common paths
+  const fallback = path.join(claudeCodeDir, 'claude.exe');
+  console.warn(`[CLI] WARNING: claude.exe not found in versioned directories, trying: ${fallback}`);
+  return fallback;
+}
+
+const CLI_PATH = findCliPath();
 
 // Skill resolution: /skill-name → read SKILL.md → inject via --append-system-prompt
 const SKILLS_BASE_DIR = path.join(
   process.env.LOCALAPPDATA!,
   'Claude-3p', 'local-agent-mode-sessions', 'skills-plugin',
-  '00000000-0000-4000-8000-000000000001',
-  '57cbd131-529f-47ce-92e3-ff7e091ef616', 'skills'
+  config.claudeDesktopAppId,
+  config.claudeDesktopUserId, 'skills'
 );
 
 /** List all available skills from the skills directory */
@@ -90,8 +110,8 @@ export interface CliRunnerParams {
 const SESSIONS_DIR = path.join(
   process.env.LOCALAPPDATA!,
   'Claude-3p', 'claude-code-sessions',
-  '57cbd131-529f-47ce-92e3-ff7e091ef616',
-  '00000000-0000-4000-8000-000000000001'
+  config.claudeDesktopUserId,
+  config.claudeDesktopAppId
 );
 
 function ensureSessionMetaFile(
@@ -204,7 +224,16 @@ export async function runCliAgent(params: CliRunnerParams): Promise<void> {
   });
 
   abortSignal.addEventListener('abort', () => {
-    proc.kill('SIGTERM');
+    // Windows doesn't support SIGTERM — use taskkill to kill the process tree
+    if (process.platform === 'win32') {
+      try {
+        execSync(`taskkill /F /T /PID ${proc.pid}`, { windowsHide: true });
+      } catch {
+        // Process may have already exited
+      }
+    } else {
+      proc.kill('SIGTERM');
+    }
   });
 
   let buffer = '';
@@ -404,7 +433,7 @@ function handleCliEvent(event: any, thread: Thread, turn: Turn): void {
         type: 'turn_completed',
         threadId: thread.id,
         turnId: turn.id,
-        stopReason: turn.stopReason,
+        stopReason: turn.stopReason || 'end_turn',
         usage: turn.usage,
       });
 

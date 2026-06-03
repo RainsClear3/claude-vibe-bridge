@@ -111,10 +111,198 @@ function escapeHtml(text: string): string {
 }
 
 function formatMarkdown(text: string): string {
-  let html = escapeHtml(text);
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre style="background:var(--bg-primary);padding:8px;border-radius:6px;margin:8px 0;font-family:var(--font-mono);font-size:13px;overflow-x:auto">$2</pre>');
-  html = html.replace(/`([^`]+)`/g, '<code style="background:var(--bg-primary);padding:2px 4px;border-radius:3px;font-family:var(--font-mono);font-size:13px">$1</code>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  if (!text) return '';
+
+  // Step 1: Extract fenced code blocks to prevent markdown processing inside them
+  const codeBlocks: string[] = [];
+  let processed = text.replace(/```(\w*)\n([\s\S]*?)```/g, (_match, _lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`<pre class="md-code-block"><code>${escapeHtml(code)}</code></pre>`);
+    return `\x00CB${idx}\x00`;
+  });
+
+  // Step 2: Extract inline code
+  const inlineCodes: string[] = [];
+  processed = processed.replace(/`([^`\n]+)`/g, (_match, code) => {
+    const idx = inlineCodes.length;
+    inlineCodes.push(`<code class="md-inline-code">${escapeHtml(code)}</code>`);
+    return `\x00IC${idx}\x00`;
+  });
+
+  // Step 3: Escape HTML in the remaining text
+  processed = escapeHtml(processed);
+
+  // Step 4: Process block-level elements
+
+  // Tables: detect table blocks (lines starting with |)
+  processed = processed.replace(/((?:^\|.+\|$\n?)+)/gm, (tableBlock) => {
+    return formatTable(tableBlock);
+  });
+
+  // Horizontal rules (---, ***, ___)
+  processed = processed.replace(/^[\s]{0,3}([-*_])\s*\1\s*\1(?:[\s]|\1)*$/gm, '<hr class="md-hr">');
+
+  // Headers: ####, ###, ##, #
+  processed = processed.replace(/^######\s+(.+)$/gm, '<h6 class="md-h6">$1</h6>');
+  processed = processed.replace(/^#####\s+(.+)$/gm, '<h5 class="md-h5">$1</h5>');
+  processed = processed.replace(/^####\s+(.+)$/gm, '<h4 class="md-h4">$1</h4>');
+  processed = processed.replace(/^###\s+(.+)$/gm, '<h3 class="md-h3">$1</h3>');
+  processed = processed.replace(/^##\s+(.+)$/gm, '<h2 class="md-h2">$1</h2>');
+  processed = processed.replace(/^#\s+(.+)$/gm, '<h1 class="md-h1">$1</h1>');
+
+  // Blockquotes (lines starting with >)
+  processed = processed.replace(/^(?:&gt;\s?(.*))+$/gm, (quoteBlock) => {
+    const content = quoteBlock.replace(/^&gt;\s?/gm, '');
+    return `<blockquote class="md-blockquote">${content}</blockquote>`;
+  });
+
+  // Unordered lists: - item or * item
+  processed = processed.replace(/^(?:[-*]\s+.+\n?)+/gm, (listBlock) => {
+    return formatUnorderedList(listBlock);
+  });
+
+  // Ordered lists: 1. item, 2. item
+  processed = processed.replace(/^(?:\d+\.\s+.+\n?)+/gm, (listBlock) => {
+    return formatOrderedList(listBlock);
+  });
+
+  // Step 5: Process inline elements
+
+  // Bold + Italic: ***text*** or ___text___
+  processed = processed.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  processed = processed.replace(/___(.+?)___/g, '<strong><em>$1</em></strong>');
+
+  // Bold: **text** or __text__
+  processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  processed = processed.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+  // Italic: *text* or _text_ (but not inside words)
+  processed = processed.replace(/(?<!\w)\*(?!\*)(.+?)(?<!\*)\*(?!\w)/g, '<em>$1</em>');
+  processed = processed.replace(/(?<!\w)_(?!_)(.+?)(?<!_)_(?!\w)/g, '<em>$1</em>');
+
+  // Strikethrough: ~~text~~
+  processed = processed.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+  // Links: [text](url)
+  processed = processed.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a class="md-link" href="$2" target="_blank" rel="noopener">$1</a>');
+
+  // Images: ![alt](url)
+  processed = processed.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img class="md-image" src="$2" alt="$1" loading="lazy">');
+
+  // Step 6: Restore inline code
+  processed = processed.replace(/\x00IC(\d+)\x00/g, (_match, idx) => inlineCodes[parseInt(idx)]);
+
+  // Step 7: Handle paragraphs - double newlines become paragraph breaks
+  // Single newlines within paragraphs become <br>
+  // But only process newlines that aren't already inside block elements
+  const lines = processed.split('\n');
+  let result = '';
+  let inParagraph = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Skip empty lines - they break paragraphs
+    if (trimmed === '') {
+      if (inParagraph) {
+        result += '</p>';
+        inParagraph = false;
+      }
+      continue;
+    }
+
+    // Don't wrap block elements in <p>
+    if (/^<(?:h[1-6]|hr|pre|blockquote|ul|ol|table|div)/.test(trimmed)) {
+      if (inParagraph) {
+        result += '</p>';
+        inParagraph = false;
+      }
+      result += line;
+      continue;
+    }
+
+    if (!inParagraph) {
+      result += '<p class="md-paragraph">';
+      inParagraph = true;
+    } else {
+      result += '<br>';
+    }
+    result += line;
+  }
+  if (inParagraph) result += '</p>';
+
+  // Step 8: Restore fenced code blocks
+  result = result.replace(/\x00CB(\d+)\x00/g, (_match, idx) => codeBlocks[parseInt(idx)]);
+
+  return result;
+}
+
+function formatTable(block: string): string {
+  const rows = block.trim().split('\n').filter(r => r.trim());
+  if (rows.length < 2) return block;
+
+  // Parse each row into cells
+  const parseCells = (row: string): string[] => {
+    return row.split('|').map(c => c.trim()).filter((c, i, arr) => {
+      // Remove first and last empty cells from leading/trailing |
+      if (i === 0 && c === '') return false;
+      if (i === arr.length - 1 && c === '') return false;
+      return true;
+    });
+  };
+
+  const headerCells = parseCells(rows[0]);
+
+  // Check if second row is a separator (---|---|---)
+  let startIdx = 1;
+  if (rows.length > 1 && /^[\s|:-]+$/.test(rows[1]) && rows[1].includes('-')) {
+    startIdx = 2;
+  }
+
+  let html = '<div class="md-table-wrap"><table class="md-table">';
+
+  // Header
+  html += '<thead><tr>';
+  for (const cell of headerCells) {
+    html += `<th>${cell}</th>`;
+  }
+  html += '</tr></thead>';
+
+  // Body
+  html += '<tbody>';
+  for (let i = startIdx; i < rows.length; i++) {
+    const cells = parseCells(rows[i]);
+    html += '<tr>';
+    for (const cell of cells) {
+      html += `<td>${cell}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+
+  return html;
+}
+
+function formatUnorderedList(block: string): string {
+  const items = block.trim().split('\n').filter(r => r.trim());
+  let html = '<ul class="md-list">';
+  for (const item of items) {
+    const content = item.replace(/^[-*]\s+/, '');
+    html += `<li>${content}</li>`;
+  }
+  html += '</ul>';
+  return html;
+}
+
+function formatOrderedList(block: string): string {
+  const items = block.trim().split('\n').filter(r => r.trim());
+  let html = '<ol class="md-list">';
+  for (const item of items) {
+    const content = item.replace(/^\d+\.\s+/, '');
+    html += `<li>${content}</li>`;
+  }
+  html += '</ol>';
   return html;
 }
 

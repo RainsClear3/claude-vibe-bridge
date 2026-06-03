@@ -17,7 +17,19 @@ export function setupWebSocket(
     path: '/ws',
     // Verify authentication before accepting connection
     verifyClient: (info, done) => {
-      const isAuthenticated = checkAuth(info.req.headers.authorization);
+      // 1. Try Authorization header
+      let authHeader = info.req.headers.authorization;
+
+      // 2. Try query parameter (for browsers that don't support headers in WebSocket)
+      if (!authHeader) {
+        const url = new URL(info.req.url || '', `http://${info.req.headers.host}`);
+        const token = url.searchParams.get('token');
+        if (token) {
+          authHeader = `Basic ${token}`;
+        }
+      }
+
+      const isAuthenticated = checkAuth(authHeader);
       done(isAuthenticated);
     }
   });

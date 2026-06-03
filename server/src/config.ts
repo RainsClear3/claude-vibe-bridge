@@ -8,6 +8,47 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../.env'), override: false });
 
+// --- Auto-discovery: scan Claude Desktop directories for UUIDs ---
+
+const CLAUDE_3P_BASE = path.join(process.env.LOCALAPPDATA!, 'Claude-3p');
+
+/** 
+ * Auto-discover userId and appId from Claude Desktop's claude-code-sessions directory.
+ * Scans: %LOCALAPPDATA%\Claude-3p\claude-code-sessions\{userId}\{appId}\
+ * Returns the first valid pair found, or null.
+ */
+function discoverDesktopIds(): { userId: string; appId: string; sessionsDir: string } | null {
+  const sessionsBase = path.join(CLAUDE_3P_BASE, 'claude-code-sessions');
+  try {
+    const userDirs = fs.readdirSync(sessionsBase);
+    for (const userId of userDirs) {
+      const userDir = path.join(sessionsBase, userId);
+      if (!fs.statSync(userDir).isDirectory()) continue;
+      const appDirs = fs.readdirSync(userDir);
+      for (const appId of appDirs) {
+        const appDir = path.join(userDir, appId);
+        if (!fs.statSync(appDir).isDirectory()) continue;
+        // Validate: directory should contain at least one .json file
+        const files = fs.readdirSync(appDir).filter(f => f.endsWith('.json'));
+        if (files.length > 0) {
+          return { userId, appId, sessionsDir: appDir };
+        }
+      }
+    }
+  } catch {}
+  return null;
+}
+
+const discovered = discoverDesktopIds();
+
+// Final UUID values: .env override > auto-discovery > hardcoded fallback
+const userId = process.env.CLAUDE_DESKTOP_USER_ID || discovered?.userId || '57cbd131-529f-47ce-92e3-ff7e091ef616';
+const appId = process.env.CLAUDE_DESKTOP_APP_ID || discovered?.appId || '00000000-0000-4000-8000-000000000001';
+
+if (discovered) {
+  console.log(`[Config] Auto-discovered Claude Desktop: userId=${userId.slice(0, 8)}... appId=${appId.slice(0, 8)}...`);
+}
+
 export const config = {
   defaultModel: 'auto',
 
@@ -31,6 +72,10 @@ export const config = {
   approvalMode: (process.env.APPROVAL_MODE || 'auto') as 'auto' | 'manual',
   maxTokens: parseInt(process.env.MAX_TOKENS || '16384', 10),
   maxTurns: 25, // Max tool use rounds per turn
+
+  // Claude Desktop 3P paths (auto-discovered or .env override)
+  claudeDesktopUserId: userId,
+  claudeDesktopAppId: appId,
 };
 
 // --- Model & Effort ---

@@ -5,6 +5,8 @@ import type { ClientMessage, ServerMessage } from '@vibe-bridge/shared';
 type MessageHandler = (msg: ServerMessage) => void;
 
 const STORAGE_KEY_SERVER_URL = 'vibe_bridge_server_url';
+const STORAGE_KEY_USERNAME = 'vibe_bridge_username';
+const STORAGE_KEY_PASSWORD = 'vibe_bridge_password';
 
 export class WsClient {
   private ws: WebSocket | null = null;
@@ -21,18 +23,25 @@ export class WsClient {
 
   private getServerUrl(): string {
     const savedUrl = localStorage.getItem(STORAGE_KEY_SERVER_URL);
-    if (savedUrl) {
-      try {
-        const url = new URL(savedUrl);
-        const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-        return `${wsProtocol}//${url.host}/ws`;
-      } catch {
-        // Invalid URL, fall through
-      }
+    let baseUrl = savedUrl || location.origin;
+
+    try {
+        const urlObj = new URL(baseUrl);
+        const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
+        let wsUrl = `${wsProtocol}//${urlObj.host}/ws`;
+
+        // Add authentication token as query parameter
+        const username = localStorage.getItem(STORAGE_KEY_USERNAME);
+        const password = localStorage.getItem(STORAGE_KEY_PASSWORD);
+        if (username && password) {
+            const token = btoa(`${username}:${password}`);
+            wsUrl += (wsUrl.includes('?') ? '&' : '?') + `token=${token}`;
+        }
+
+        return wsUrl;
+    } catch {
+        return `ws://${location.host}/ws`;
     }
-    // Default to current host
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${location.host}/ws`;
   }
 
   static getHttpUrl(): string {
@@ -48,8 +57,18 @@ export class WsClient {
     return location.origin;
   }
 
-  static setServerUrl(url: string): void {
+  static setServerConfig(url: string, username?: string, password?: string): void {
     localStorage.setItem(STORAGE_KEY_SERVER_URL, url);
+    if (username !== undefined) localStorage.setItem(STORAGE_KEY_USERNAME, username);
+    if (password !== undefined) localStorage.setItem(STORAGE_KEY_PASSWORD, password);
+  }
+
+  static getStoredConfig() {
+    return {
+      url: localStorage.getItem(STORAGE_KEY_SERVER_URL),
+      username: localStorage.getItem(STORAGE_KEY_USERNAME),
+      password: localStorage.getItem(STORAGE_KEY_PASSWORD)
+    };
   }
 
   static getStoredServerUrl(): string | null {

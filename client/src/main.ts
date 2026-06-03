@@ -14,23 +14,25 @@ let wsClient: WsClient | null = null;
 function setupConfigScreen(): void {
   const configScreen = document.getElementById('config-screen')!;
   const serverUrlInput = document.getElementById('server-url') as HTMLInputElement;
+  const usernameInput = document.getElementById('server-username') as HTMLInputElement;
+  const passwordInput = document.getElementById('server-password') as HTMLInputElement;
   const saveBtn = document.getElementById('save-config-btn')!;
   const settingsBtn = document.getElementById('settings-btn')!;
   const quickSettingsBtn = document.getElementById('quick-settings-btn')!;
 
-  // Pre-fill existing URL
-  const existingUrl = WsClient.getStoredServerUrl();
-  if (existingUrl) {
-    serverUrlInput.value = existingUrl;
-  }
+  // Pre-fill existing config
+  const config = WsClient.getStoredConfig();
+  if (config.url) serverUrlInput.value = config.url;
+  if (config.username) usernameInput.value = config.username;
+  if (config.password) passwordInput.value = config.password;
 
   function showConfigScreen() {
     configScreen.classList.remove('hidden');
-    // Pre-fill current URL
-    const currentUrl = WsClient.getStoredServerUrl();
-    if (currentUrl) {
-      serverUrlInput.value = currentUrl;
-    }
+    // Pre-fill current config
+    const currentConfig = WsClient.getStoredConfig();
+    if (currentConfig.url) serverUrlInput.value = currentConfig.url;
+    if (currentConfig.username) usernameInput.value = currentConfig.username;
+    if (currentConfig.password) passwordInput.value = currentConfig.password;
   }
 
   function hideConfigScreen() {
@@ -39,6 +41,9 @@ function setupConfigScreen(): void {
 
   function saveAndConnect() {
     const url = serverUrlInput.value.trim();
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+
     if (!url) {
       alert('请输入服务器地址');
       return;
@@ -53,7 +58,7 @@ function setupConfigScreen(): void {
     }
 
     // Save
-    WsClient.setServerUrl(url);
+    WsClient.setServerConfig(url, username, password);
 
     // Reconnect
     hideConfigScreen();
@@ -113,7 +118,7 @@ function initApp(): void {
 
   // Auto-configure: browser users (any domain) use current origin directly
   if (!isCapacitor && !hasConfig) {
-    WsClient.setServerUrl(location.origin);
+    WsClient.setServerConfig(location.origin);
   }
 
   // Only show config screen if no config AND in Capacitor (Android App)
