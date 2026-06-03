@@ -35,7 +35,7 @@ ngrok http 3900
 
 ngrok 会显示一个公网地址，例如：
 ```
-Forwarding  https://xyz.ngrok-free.app -&gt; http://localhost:3900
+Forwarding  https://xyz.ngrok-free.dev -&gt; http://localhost:3900
 ```
 
 在手机浏览器打开这个地址即可！
