@@ -50,7 +50,7 @@ if (discovered) {
 }
 
 export const config = {
-  defaultModel: 'auto',
+  defaultModel: '',  // Empty = don't pass --model, let CLI use its default
 
   // Server
   port: parseInt(process.env.PORT || '3900', 10),
