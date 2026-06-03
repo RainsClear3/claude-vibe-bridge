@@ -41,6 +41,9 @@ jobs:
       - name: Install Capacitor CLI
         run: npx cap sync android
 
+      - name: Fix gradlew permission
+        run: chmod +x android/gradlew
+
       - name: Build APK (Debug)
         run: cd android && ./gradlew assembleDebug
 
