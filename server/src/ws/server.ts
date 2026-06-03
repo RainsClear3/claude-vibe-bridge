@@ -7,8 +7,20 @@ import { addClient, removeClient, getClientCount, broadcast } from './broadcast.
 
 export { broadcast };
 
-export function setupWebSocket(server: http.Server, sessionManager: SessionManager): void {
-  const wss = new WebSocketServer({ server, path: '/ws' });
+export function setupWebSocket(
+  server: http.Server, 
+  sessionManager: SessionManager,
+  checkAuth: (authHeader: string | undefined) => boolean
+): void {
+  const wss = new WebSocketServer({ 
+    server, 
+    path: '/ws',
+    // Verify authentication before accepting connection
+    verifyClient: (info, done) => {
+      const isAuthenticated = checkAuth(info.req.headers.authorization);
+      done(isAuthenticated);
+    }
+  });
 
   wss.on('connection', (ws: WebSocket) => {
     addClient(ws);

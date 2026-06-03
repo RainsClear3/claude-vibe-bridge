@@ -21,6 +21,11 @@ export const config = {
   allowedDirs: (process.env.ALLOWED_DIRS || 'E:\\claude')
     .split('|')
     .map(d => d.trim()),
+  
+  // Authentication
+  authEnabled: process.env.AUTH_ENABLED?.toLowerCase() === 'true',
+  authUsername: process.env.AUTH_USERNAME || '',
+  authPassword: process.env.AUTH_PASSWORD || '',
 
   // Agent
   approvalMode: (process.env.APPROVAL_MODE || 'auto') as 'auto' | 'manual',

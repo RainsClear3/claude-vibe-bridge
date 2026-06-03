@@ -14,6 +14,28 @@
   <link rel="stylesheet" href="/src/styles/app.css">
 </head>
 <body>
+  <!-- Server Configuration Screen (shown on first start) -->
+  <div id="config-screen" class="config-screen hidden">
+    <div class="config-container">
+      <h1>🔗 服务器配置</h1>
+      <p class="config-desc">请输入你的 Claude Vibe Bridge 服务器地址</p>
+      <div class="config-input-group">
+        <label for="server-url">服务器地址</label>
+        <input 
+          type="url" 
+          id="server-url" 
+          placeholder="https://your-domain.ngrok-free.dev"
+          required
+        >
+      </div>
+      <p class="config-hint">
+        例如：<code>https://xxx.ngrok-free.dev</code><br>
+        或者：<code>http://192.168.1.100:3900</code>
+      </p>
+      <button id="save-config-btn" class="config-btn">保存并连接</button>
+    </div>
+  </div>
+
   <div id="app">
     <!-- Sidebar: Thread list (hidden by default on mobile) -->
     <div id="sidebar" class="sidebar">
@@ -22,12 +44,16 @@
         <button id="new-session-btn" title="新会话">+</button>
       </div>
       <div id="thread-list"></div>
+      <div class="sidebar-footer">
+        <button id="settings-btn" class="sidebar-footer-btn">⚙️ 设置</button>
+      </div>
     </div>
 
     <!-- Main area -->
     <div id="main-area">
       <div id="status-bar">
         <button id="sidebar-toggle" title="会话列表">☰</button>
+        <button id="quick-settings-btn" title="服务器设置" class="quick-settings-btn">⚙️</button>
       </div>
       <div id="chat-container">
         <div id="messages"></div>

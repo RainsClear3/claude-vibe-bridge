@@ -4,6 +4,8 @@ import type { ClientMessage, ServerMessage } from '@vibe-bridge/shared';
 
 type MessageHandler = (msg: ServerMessage) => void;
 
+const STORAGE_KEY_SERVER_URL = 'vibe_bridge_server_url';
+
 export class WsClient {
   private ws: WebSocket | null = null;
   private handlers = new Set<MessageHandler>();
@@ -14,8 +16,44 @@ export class WsClient {
   private url: string;
 
   constructor() {
+    this.url = this.getServerUrl();
+  }
+
+  private getServerUrl(): string {
+    const savedUrl = localStorage.getItem(STORAGE_KEY_SERVER_URL);
+    if (savedUrl) {
+      try {
+        const url = new URL(savedUrl);
+        const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${wsProtocol}//${url.host}/ws`;
+      } catch {
+        // Invalid URL, fall through
+      }
+    }
+    // Default to current host
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    this.url = `${protocol}//${location.host}/ws`;
+    return `${protocol}//${location.host}/ws`;
+  }
+
+  static getHttpUrl(): string {
+    const savedUrl = localStorage.getItem(STORAGE_KEY_SERVER_URL);
+    if (savedUrl) {
+      try {
+        const url = new URL(savedUrl);
+        return url.origin;
+      } catch {
+        // Fall through
+      }
+    }
+    return location.origin;
+  }
+
+  static setServerUrl(url: string): void {
+    localStorage.setItem(STORAGE_KEY_SERVER_URL, url);
+  }
+
+  static getStoredServerUrl(): string | null {
+    return localStorage.getItem(STORAGE_KEY_SERVER_URL);
   }
 
   get connected(): boolean {

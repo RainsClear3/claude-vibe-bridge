@@ -54,6 +54,7 @@ export interface AppState {
   skills: SkillInfo[];
   selectedModel: string | null;
   selectedEffort: string | null;
+  selectedSkill: string | null;
   currentTheme: ThemeId;
 }
 
@@ -72,6 +73,7 @@ class Store {
     skills: [],
     selectedModel: null,
     selectedEffort: 'max',
+    selectedSkill: '',
     currentTheme: (localStorage.getItem('vb-theme') as ThemeId) || 'default',
   };
 
@@ -211,6 +213,11 @@ class Store {
 
   setSelectedEffort(effortId: string): void {
     this.state.selectedEffort = effortId;
+    this.notify();
+  }
+
+  setSelectedSkill(skillId: string): void {
+    this.state.selectedSkill = skillId;
     this.notify();
   }
 

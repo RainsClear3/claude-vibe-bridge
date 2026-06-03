@@ -6,3 +6,4 @@ data/
 *.d.ts
 *.log
 *.txt
+.trae/

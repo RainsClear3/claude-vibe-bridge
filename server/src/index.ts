@@ -6,6 +6,36 @@ import { config } from './config.js';
 import { setupWebSocket } from './ws/server.js';
 import { SessionManager } from './session/manager.js';
 
+// Basic Auth helper function
+export function checkAuth(authHeader: string | undefined): boolean {
+  if (!config.authEnabled) return true;
+  
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    return false;
+  }
+  
+  const base64Credentials = authHeader.slice('Basic '.length);
+  const credentials = Buffer.from(base64Credentials, 'base64').toString('utf-8');
+  const [username, password] = credentials.split(':');
+  
+  return username === config.authUsername && password === config.authPassword;
+}
+
+// Auth middleware
+function authMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (!config.authEnabled) {
+    next();
+    return;
+  }
+  
+  if (checkAuth(req.headers.authorization)) {
+    next();
+  } else {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Claude Vibe Bridge"');
+    res.status(401).send('Authentication required');
+  }
+}
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 process.on('uncaughtException', (err) => {
@@ -27,6 +57,9 @@ async function main() {
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     next();
   });
+  
+  // Apply authentication middleware
+  app.use(authMiddleware);
 
   // Force no-cache on sw.js to ensure updates propagate quickly
   // Must be BEFORE static middleware to override it
@@ -50,7 +83,7 @@ async function main() {
   await sessionManager.load();
 
   // Setup WebSocket
-  setupWebSocket(server, sessionManager);
+  setupWebSocket(server, sessionManager, checkAuth);
 
   // SPA fallback
   app.get('*', (_req, res) => {

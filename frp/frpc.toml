@@ -1,0 +1,27 @@
+
+# frp 客户端配置 - 运行在你的内网电脑上
+
+[common]
+# 公网云服务器的 IP 或域名
+serverAddr = "your-server-ip.com"  # 替换为你的云服务器 IP
+
+# frp 服务端 bindPort
+serverPort = 7000
+
+# 与服务端一致的 token
+auth.token = "your_auth_token_here"
+
+# 日志
+log.to = "./frpc.log"
+log.level = "info"
+log.maxDays = 3
+
+# --- 代理配置 ---
+
+# 代理 HTTP/HTTPS 服务（用于访问 vibe-bridge Web 界面）
+[[proxies]]
+name = "vibe-bridge-web"
+type = "tcp"
+localPort = 3900
+remotePort = 3900  # 云服务器上开放的端口，手机访问时用这个端口
+
