@@ -255,8 +255,23 @@ function submit(wsClient: WsClient, textarea: HTMLTextAreaElement): void {
 
   const activeThread = store.getActiveThread();
   const isRunning = activeThread && store.state.runningThreadIds.has(activeThread.id);
-
   if (isRunning) return;
+
+  // Handle built-in commands
+  if (rawContent === '/clear') {
+    store.setActiveThread(null);
+    textarea.value = '';
+    textarea.style.height = 'auto';
+    return;
+  }
+  if (rawContent === '/export') {
+    if (activeThread) {
+      wsClient.send({ type: 'export_thread', threadId: activeThread.id });
+    }
+    textarea.value = '';
+    textarea.style.height = 'auto';
+    return;
+  }
 
   wsClient.send({
     type: 'submit_task',

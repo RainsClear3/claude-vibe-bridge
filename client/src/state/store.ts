@@ -56,6 +56,9 @@ export interface AppState {
   selectedEffort: string | null;
   selectedSkill: string;
   currentTheme: ThemeId;
+  statusFilter: 'active' | 'all' | 'archived';
+  searchQuery: string;
+  usageByThread: Map<string, { inputTokens: number; outputTokens: number; model?: string }>;
 }
 
 type Listener = () => void;
@@ -75,6 +78,9 @@ class Store {
     selectedEffort: 'max',
     selectedSkill: '',
     currentTheme: (localStorage.getItem('vb-theme') as ThemeId) || 'default',
+    statusFilter: 'all' as const,
+    searchQuery: '',
+    usageByThread: new Map(),
   };
 
   private listeners = new Set<Listener>();
@@ -176,6 +182,21 @@ class Store {
 
   setThreadSummaries(summaries: ThreadSummary[]): void {
     this.state.threadSummaries = summaries;
+    this.notify();
+  }
+
+  setUsage(threadId: string, usage: { inputTokens: number; outputTokens: number; model?: string }): void {
+    this.state.usageByThread.set(threadId, usage);
+    this.notify();
+  }
+
+  setStatusFilter(filter: 'active' | 'all' | 'archived'): void {
+    this.state.statusFilter = filter;
+    this.notify();
+  }
+
+  setSearchQuery(query: string): void {
+    this.state.searchQuery = query;
     this.notify();
   }
 

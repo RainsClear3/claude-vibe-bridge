@@ -43,7 +43,7 @@ cp .env.example .env
 npm run dev:server    # Server runs on http://localhost:3900
 ```
 
-Open `http://localhost:3900` in any browser. The server auto-discovers your Claude Desktop installation.
+Open `http://localhost:3900` or `https://your-ip:3900` in any browser. The server auto-discovers your Claude Desktop installation.
 
 ### Production Build
 

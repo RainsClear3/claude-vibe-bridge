@@ -43,7 +43,7 @@ cp .env.example .env
 npm run dev:server    # 服务端运行在 http://localhost:3900
 ```
 
-在任意浏览器中打开 `http://localhost:3900`。服务端会自动发现你的 Claude Desktop 安装。
+在任意浏览器中打开 `http://localhost:3900` or `https://your-ip:3900`。服务端会自动发现你的 Claude Desktop 安装。
 
 ### 生产构建
 

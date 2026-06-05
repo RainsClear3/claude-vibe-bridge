@@ -36,7 +36,8 @@ export function handleMessage(
     case 'get_thread': {
       const thread = sessionManager.getThread(msg.threadId);
       if (thread) {
-        broadcast({ type: 'thread_detail', thread });
+        const usage = sessionManager.getUsageForThread(msg.threadId);
+        broadcast({ type: 'thread_detail', thread, usage });
       } else {
         broadcast({ type: 'error', message: `Thread ${msg.threadId} not found` });
       }
@@ -46,7 +47,8 @@ export function handleMessage(
     case 'resume_session': {
       const thread = sessionManager.getThread(msg.threadId);
       if (thread) {
-        broadcast({ type: 'thread_detail', thread });
+        const usage = sessionManager.getUsageForThread(msg.threadId);
+        broadcast({ type: 'thread_detail', thread, usage });
       } else {
         broadcast({ type: 'error', message: `Thread ${msg.threadId} not found` });
       }
@@ -76,6 +78,49 @@ export function handleMessage(
     case 'list_skills': {
       const skills = listSkills();
       broadcast({ type: 'skills_list', skills });
+      break;
+    }
+
+    case 'archive_thread': {
+      console.log(`[Handler] archive_thread: ${msg.threadId} -> archived=${msg.archived}`);
+      sessionManager.archiveThread(msg.threadId, msg.archived);
+      const threads = sessionManager.listThreads();
+      broadcast({ type: 'threads_list', threads });
+      break;
+    }
+
+    case 'rename_thread': {
+      console.log(`[Handler] rename_thread: ${msg.threadId} -> "${msg.title}"`);
+      sessionManager.renameThread(msg.threadId, msg.title);
+      const threads = sessionManager.listThreads();
+      broadcast({ type: 'threads_list', threads });
+      break;
+    }
+
+    case 'export_thread': {
+      console.log(`[Handler] export_thread: ${msg.threadId}`);
+      const jsonl = sessionManager.exportThread(msg.threadId);
+      if (jsonl) {
+        broadcast({ type: 'export_response', threadId: msg.threadId, jsonl });
+      } else {
+        broadcast({ type: 'error', message: `Export failed for thread ${msg.threadId}` });
+      }
+      break;
+    }
+
+    case 'delete_thread': {
+      console.log(`[Handler] delete_thread: ${msg.threadId}`);
+      sessionManager.deleteThread(msg.threadId);
+      const threads = sessionManager.listThreads();
+      broadcast({ type: 'threads_list', threads });
+      break;
+    }
+
+    case 'pin_thread': {
+      console.log(`[Handler] pin_thread: ${msg.threadId} -> pinned=${msg.pinned}`);
+      sessionManager.pinThread(msg.threadId, msg.pinned);
+      const threads = sessionManager.listThreads();
+      broadcast({ type: 'threads_list', threads });
       break;
     }
 

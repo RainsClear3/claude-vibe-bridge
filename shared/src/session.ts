@@ -10,6 +10,7 @@ export interface Thread {
   createdAt: number;      // epoch ms
   lastActivityAt: number;
   turns: Turn[];
+  permissionMode?: string;
 }
 
 export interface Turn {
@@ -57,6 +58,9 @@ export interface ThreadSummary {
   lastActivityAt: number;
   turnCount: number;
   lastMessage?: string;
+  isArchived?: boolean;
+  isPinned?: boolean;
+  usage?: { inputTokens: number; outputTokens: number };
 }
 
 export type ItemDelta =

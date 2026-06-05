@@ -3,9 +3,10 @@ import fs from 'fs/promises';
 import fsSync from 'fs';
 import path from 'path';
 import os from 'os';
-import type { Thread, Turn, Item, ThreadSummary } from '@vibe-bridge/shared';
+import type { Thread, Turn, Item, ThreadSummary, Usage } from '@vibe-bridge/shared';
 import { broadcast } from '../ws/broadcast.js';
-import { config } from '../config.js';
+import { config, normalizeModel, resolveClaudeModelName } from '../config.js';
+import * as UsagePersistence from './usage-persistence.js';
 
 interface PendingApproval {
   resolve: (approved: boolean) => void;
@@ -200,6 +201,13 @@ function parseJsonlToThread(meta: ClaudeSessionMeta, jsonlPath: string): Thread 
       if (msg.duration_ms) {
         currentTurn.completedAt = (currentTurn.startedAt || Date.now()) + msg.duration_ms;
       }
+      currentTurn.usage = {
+        inputTokens: msg.usage?.input_tokens || 0,
+        outputTokens: msg.usage?.output_tokens || 0,
+      };
+      if (currentTurn.usage.inputTokens > 0 || currentTurn.usage.outputTokens > 0) {
+        UsagePersistence.persistUsage(currentTurn.threadId, currentTurn.usage, thread.model);
+      }
     }
   }
 
@@ -225,16 +233,15 @@ export class SessionManager {
           const content = await fs.readFile(path.join(CLAUDE_SESSIONS_DIR, file), 'utf-8');
           const meta: ClaudeSessionMeta = JSON.parse(content);
 
-          if (meta.isArchived) continue;
-
           const thread: Thread = {
             id: meta.sessionId,
             title: meta.title || '(untitled)',
             cwd: meta.cwd || process.env.USERPROFILE || 'C:\\',
-            model: meta.model || 'unknown',
+            model: normalizeModel(meta.model || ''),
             createdAt: meta.createdAt,
             lastActivityAt: meta.lastActivityAt || meta.createdAt,
             turns: [],
+            permissionMode: (meta as any).permissionMode,
           };
 
           (thread as any)._cliSessionId = meta.cliSessionId;
@@ -250,6 +257,26 @@ export class SessionManager {
     } catch (err: any) {
       console.log(`[Session] No existing sessions found (${err.message})`);
     }
+  }
+
+  broadcastUsageForThread(threadId: string): void {
+    const usage = UsagePersistence.getUsage(threadId);
+    if (usage) {
+      broadcast({
+        type: 'usage_update',
+        threadId,
+        usage: { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens },
+      });
+    }
+  }
+
+  getUsageForThread(threadId: string): Usage | undefined {
+    const usage = UsagePersistence.getUsage(threadId);
+    if (!usage) return undefined;
+    return {
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+    };
   }
 
   async reloadSessions(): Promise<number> {
@@ -330,18 +357,176 @@ export class SessionManager {
   }
 
   listThreads(): ThreadSummary[] {
+    const pinnedIds = this.loadPinnedIds();
     return Array.from(this.threads.values())
-      .sort((a, b) => b.lastActivityAt - a.lastActivityAt)
-      .map(t => ({
-        id: t.id,
-        title: t.title,
-        cwd: t.cwd,
-        model: t.model,
-        createdAt: t.createdAt,
-        lastActivityAt: t.lastActivityAt,
-        turnCount: t.turns.length || ((t as any)._completedTurns || 0),
-        lastMessage: t.turns.at(-1)?.userMessage,
-      }));
+      .sort((a, b) => {
+        const aPinned = pinnedIds.has(a.id) ? 1 : 0;
+        const bPinned = pinnedIds.has(b.id) ? 1 : 0;
+        if (aPinned !== bPinned) return bPinned - aPinned; // pinned first
+        return b.lastActivityAt - a.lastActivityAt;
+      })
+      .map(t => {
+        const usage = UsagePersistence.getUsage(t.id);
+        return {
+          id: t.id,
+          title: t.title,
+          cwd: t.cwd,
+          model: t.model,
+          createdAt: t.createdAt,
+          lastActivityAt: t.lastActivityAt,
+          turnCount: t.turns.length || ((t as any)._completedTurns || 0),
+          lastMessage: t.turns.at(-1)?.userMessage,
+          isArchived: this.threadMeta.get(t.id)?.isArchived || false,
+          isPinned: pinnedIds.has(t.id),
+          usage: usage ? { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens } : undefined,
+        };
+      });
+  }
+
+  archiveThread(threadId: string, archived: boolean): void {
+    const thread = this.threads.get(threadId);
+    if (!thread) return;
+    const meta = this.threadMeta.get(threadId);
+    if (!meta) return;
+
+    meta.isArchived = archived;
+
+    // Persist to JSON file
+    const metaPath = path.join(CLAUDE_SESSIONS_DIR, `${threadId}.json`);
+    try {
+      if (fsSync.existsSync(metaPath)) {
+        const existing = JSON.parse(fsSync.readFileSync(metaPath, 'utf-8'));
+        existing.isArchived = archived;
+        fsSync.writeFileSync(metaPath, JSON.stringify(existing), 'utf-8');
+      }
+    } catch (err: any) {
+      console.log(`[Session] Failed to archive thread: ${err.message}`);
+    }
+
+    console.log(`[Session] ${archived ? 'Archived' : 'Unarchived'} thread: ${threadId}`);
+  }
+
+  renameThread(threadId: string, title: string): void {
+    const thread = this.threads.get(threadId);
+    if (!thread) return;
+
+    thread.title = title;
+
+    // Persist to JSON file
+    const metaPath = path.join(CLAUDE_SESSIONS_DIR, `${threadId}.json`);
+    try {
+      if (fsSync.existsSync(metaPath)) {
+        const existing = JSON.parse(fsSync.readFileSync(metaPath, 'utf-8'));
+        existing.title = title;
+        existing.titleSource = 'manual';
+        fsSync.writeFileSync(metaPath, JSON.stringify(existing), 'utf-8');
+      }
+    } catch (err: any) {
+      console.log(`[Session] Failed to rename thread: ${err.message}`);
+    }
+    console.log(`[Session] Renamed thread ${threadId} to "${title}"`);
+  }
+
+  exportThread(threadId: string): string | null {
+    const meta = this.threadMeta.get(threadId);
+    if (!meta) return null;
+    const jsonlPath = findJsonlForSession(meta);
+    if (!jsonlPath || !fsSync.existsSync(jsonlPath)) return null;
+    return fsSync.readFileSync(jsonlPath, 'utf-8');
+  }
+
+  deleteThread(threadId: string): void {
+    const meta = this.threadMeta.get(threadId);
+    if (!meta) return;
+
+    // 1. Delete JSONL transcript
+    const jsonlPath = findJsonlForSession(meta);
+    if (jsonlPath && fsSync.existsSync(jsonlPath)) {
+      try {
+        fsSync.unlinkSync(jsonlPath);
+        console.log(`[Session] Deleted JSONL: ${jsonlPath}`);
+      } catch (err: any) {
+        console.log(`[Session] Failed to delete JSONL: ${err.message}`);
+      }
+    }
+
+    // 2. Delete session metadata JSON
+    const metaPath = path.join(CLAUDE_SESSIONS_DIR, `${threadId}.json`);
+    if (fsSync.existsSync(metaPath)) {
+      try {
+        fsSync.unlinkSync(metaPath);
+        console.log(`[Session] Deleted meta: ${metaPath}`);
+      } catch (err: any) {
+        console.log(`[Session] Failed to delete meta: ${err.message}`);
+      }
+    }
+
+    // 3. Remove usage data for this thread (independent file)
+    UsagePersistence.deleteUsage(threadId);
+
+    // 4. Remove from memory
+    this.threads.delete(threadId);
+    this.threadMeta.delete(threadId);
+    this.historyLoaded.delete(threadId);
+
+    // 5. Remove from pinned list if pinned
+    this.updatePinnedList(threadId, false);
+
+    console.log(`[Session] Deleted thread: ${threadId}`);
+  }
+
+  pinThread(threadId: string, pinned: boolean): void {
+    this.updatePinnedList(threadId, pinned);
+
+    // Also update meta in memory for listThreads
+    const meta = this.threadMeta.get(threadId);
+    if (meta) {
+      (meta as any).isPinned = pinned;
+    }
+    console.log(`[Session] ${pinned ? 'Pinned' : 'Unpinned'} thread: ${threadId}`);
+  }
+
+  private updatePinnedList(threadId: string, pinned: boolean): void {
+    const configPath = path.join(
+      process.env.LOCALAPPDATA!, 'Claude-3p', 'claude_desktop_config.json'
+    );
+    try {
+      const raw = fsSync.readFileSync(configPath, 'utf-8');
+      const config = JSON.parse(raw);
+
+      // Ensure path exists
+      if (!config.preferences) config.preferences = {};
+      if (!config.preferences.epitaxyPrefs) config.preferences.epitaxyPrefs = {};
+
+      let pinnedList: string[] = config.preferences.epitaxyPrefs['starred-local-code-sessions'] || [];
+
+      if (pinned) {
+        if (!pinnedList.includes(threadId)) {
+          pinnedList.push(threadId);
+        }
+      } else {
+        pinnedList = pinnedList.filter((id: string) => id !== threadId);
+      }
+
+      config.preferences.epitaxyPrefs['starred-local-code-sessions'] = pinnedList;
+      fsSync.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+    } catch (err: any) {
+      console.log(`[Session] Failed to update pinned list: ${err.message}`);
+    }
+  }
+
+  private loadPinnedIds(): Set<string> {
+    const configPath = path.join(
+      process.env.LOCALAPPDATA!, 'Claude-3p', 'claude_desktop_config.json'
+    );
+    try {
+      const raw = fsSync.readFileSync(configPath, 'utf-8');
+      const config = JSON.parse(raw);
+      const list: string[] = config.preferences?.epitaxyPrefs?.['starred-local-code-sessions'] || [];
+      return new Set(list);
+    } catch {
+      return new Set();
+    }
   }
 
   async submitTask(params: {
@@ -363,6 +548,8 @@ export class SessionManager {
       this.ensureHistory(params.threadId); // Ensure we have the context
       thread = this.threads.get(params.threadId)!;
       thread.lastActivityAt = now;
+      // Update thread.model if user selected a different model
+      if (model) thread.model = model;
       isResume = true;
     } else {
       // Create new thread
@@ -453,15 +640,44 @@ export class SessionManager {
     effort?: string,
   ): Promise<void> {
     const { runCliAgent } = await import('../agent/cli-runner.js');
+    // Use explicit model first, then the thread's stored model (normalized alias),
+    // as fallback rather than raw _cliModel which may contain proxy model names
+    const effectiveModel = model || thread.model;
+
+    // Sync the session meta file model before resume, so the CLI doesn't
+    // see a mismatch between --model and what's stored in the session file.
+    // This prevents the CLI from generating malformed model names
+    // (e.g. double [1m] suffix when switching between 1M/non-1M variants).
+    // Must write the FULL Claude model name (e.g. "claude-opus-4-7[1m]"),
+    // NOT the CLI alias ("opus[1m]"), to stay consistent with Claude Desktop.
+    if ((thread as any)._cliSessionId && effectiveModel) {
+      this.syncSessionMetaModel(thread.id, effectiveModel);
+    }
+
     await runCliAgent({
       thread,
       turn,
       content: turn.userMessage,
       cwd: thread.cwd,
       sessionId: (thread as any)._cliSessionId,
-      model: model || (thread as any)._cliModel,
+      model: effectiveModel,
       effort,
       abortSignal,
     });
+  }
+
+  private syncSessionMetaModel(threadId: string, modelAlias: string): void {
+    const metaPath = path.join(CLAUDE_SESSIONS_DIR, `${threadId}.json`);
+    try {
+      if (!fsSync.existsSync(metaPath)) return;
+      const existing = JSON.parse(fsSync.readFileSync(metaPath, 'utf-8'));
+      const fullName = resolveClaudeModelName(modelAlias);
+      if (existing.model === fullName) return; // already in sync
+      existing.model = fullName;
+      fsSync.writeFileSync(metaPath, JSON.stringify(existing), 'utf-8');
+      console.log(`[Session] Synced model in meta: ${threadId} -> ${fullName}`);
+    } catch (err: any) {
+      console.log(`[Session] Failed to sync model in meta: ${err.message}`);
+    }
   }
 }

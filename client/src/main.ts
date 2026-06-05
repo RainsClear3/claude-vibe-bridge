@@ -169,16 +169,41 @@ function initApp(): void {
 
       case 'turn_completed':
         store.completeTurn(msg.threadId, msg.turnId, msg.stopReason);
+        if (msg.usage) {
+          const thread = store.state.threads.get(msg.threadId);
+          store.setUsage(msg.threadId, {
+            inputTokens: msg.usage.inputTokens,
+            outputTokens: msg.usage.outputTokens,
+            model: thread?.model,
+          });
+        }
         wsClient!.send({ type: 'list_threads' });
         break;
 
       case 'threads_list':
         store.setThreadSummaries(msg.threads);
+        // 从 summary 中恢复已持久化的用量
+        for (const t of msg.threads) {
+          if (t.usage) {
+            store.setUsage(t.id, {
+              inputTokens: t.usage.inputTokens,
+              outputTokens: t.usage.outputTokens,
+              model: t.model,
+            });
+          }
+        }
         renderThreadList(wsClient!);
         break;
 
       case 'thread_detail':
         store.upsertThread(msg.thread);
+        if (msg.usage) {
+          store.setUsage(msg.thread.id, {
+            inputTokens: msg.usage.inputTokens,
+            outputTokens: msg.usage.outputTokens,
+            model: msg.thread.model,
+          });
+        }
         renderChatView();
         break;
 
@@ -200,6 +225,20 @@ function initApp(): void {
       case 'skills_list':
         store.setSkillsList(msg.skills);
         renderInputBar(wsClient!);
+        break;
+
+      case 'usage_update': {
+        const thread = store.state.threads.get(msg.threadId);
+        store.setUsage(msg.threadId, {
+          inputTokens: msg.usage.inputTokens,
+          outputTokens: msg.usage.outputTokens,
+          model: thread?.model,
+        });
+        break;
+      }
+
+      case 'export_response':
+        handleExportResponse(msg.threadId, msg.jsonl);
         break;
 
       case 'error':
@@ -241,6 +280,40 @@ function initApp(): void {
 // Initialize everything
 setupConfigScreen();
 initApp();
+
+// Ctrl+K keyboard shortcut for search
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.select();
+      // Open sidebar on mobile if needed
+      const sidebar = document.getElementById('sidebar');
+      if (sidebar && !sidebar.classList.contains('open')) {
+        sidebar.classList.add('open');
+      }
+    }
+  }
+});
+
+function handleExportResponse(threadId: string, jsonl: string): void {
+  // Extract title from store
+  const thread = store.state.threads.get(threadId);
+  const title = thread?.title || threadId;
+  const safeName = title.replace(/[^a-zA-Z0-9\u4e00-\u9fff_-]/g, '_').slice(0, 60);
+
+  const blob = new Blob([jsonl], { type: 'application/jsonl' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${safeName}.jsonl`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 // Service worker with auto-update
 if ('serviceWorker' in navigator) {

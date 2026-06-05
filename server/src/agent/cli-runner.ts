@@ -4,7 +4,8 @@ import path from 'path';
 import { v4 as uuid } from 'uuid';
 import type { Thread, Turn, Item } from '@vibe-bridge/shared';
 import { broadcast } from '../ws/broadcast.js';
-import { config } from '../config.js';
+import { config, getAliasToFullModelMap, getCliEnvVars, resolveClaudeModelName } from '../config.js';
+import { persistUsage } from '../session/usage-persistence.js';
 
 function findCliPath(): string {
   const claudeCodeDir = path.join(
@@ -216,11 +217,18 @@ export async function runCliAgent(params: CliRunnerParams): Promise<void> {
   console.log(`[CLI] Running: ${CLI_PATH} ${args.join(' ')}`);
   console.log(`[CLI] CWD: ${cliCwd}`);
 
+  // Merge CLI env vars (ANTHROPIC_DEFAULT_*_MODEL from settings.json env field)
+  // so CLI can resolve aliases to the correct proxy model names.
+  const cliEnvVars = getCliEnvVars();
+  const procEnv = { ...process.env, ...cliEnvVars } as Record<string, string>;
+
+  console.log(`[CLI] Injected env vars:`, Object.keys(cliEnvVars).map(k => `${k}=${cliEnvVars[k]}`).join(', '));
+
   const proc = spawn(CLI_PATH, args, {
     cwd: cliCwd,
     stdio: ['pipe', 'pipe', 'pipe'],
     windowsHide: true,
-    env: process.env,
+    env: procEnv,
   });
 
   abortSignal.addEventListener('abort', () => {
@@ -288,11 +296,28 @@ export async function runCliAgent(params: CliRunnerParams): Promise<void> {
       }
 
       if (sessionId && code === 0) {
+        // Always store the standard Claude model name in session meta, NOT
+        // the proxy name (e.g. "claude-opus-4-8[1m]" not "mimo-v2.5[1M]").
+        // This keeps vibe-bridge sessions compatible with Claude Desktop 3P.
+        const metaModel = resolveClaudeModelName(thread.model);
         if (isNewSession) {
-          ensureSessionMetaFile(sessionId, thread, (thread as any)._cliModel || '', thread.turns.length);
+          ensureSessionMetaFile(sessionId, thread, metaModel, thread.turns.length);
         } else {
-          updateSessionMetaFile(sessionId, thread, (thread as any)._cliModel || '', thread.turns.length);
+          updateSessionMetaFile(sessionId, thread, metaModel, thread.turns.length);
         }
+      }
+
+      // Persist usage data if available (stored independently from session files)
+      console.log(`[CLI] Usage check: input=${turn.usage?.inputTokens}, output=${turn.usage?.outputTokens}, status=${turn.status}`);
+      if (turn.usage && (turn.usage.inputTokens > 0 || turn.usage.outputTokens > 0)) {
+        try {
+          persistUsage(thread.id, turn.usage, (thread as any)._cliModel || thread.model || '');
+          console.log(`[CLI] Persisted usage for ${thread.id}: ${turn.usage.inputTokens} in, ${turn.usage.outputTokens} out`);
+        } catch (err: any) {
+          console.log(`[CLI] Failed to persist usage: ${err.message}`);
+        }
+      } else {
+        console.log(`[CLI] No usage to persist for ${thread.id}`);
       }
 
       resolve();
@@ -323,7 +348,8 @@ function handleCliEvent(event: any, thread: Thread, turn: Turn): void {
     case 'system': {
       if (event.subtype === 'init') {
         (thread as any)._cliModel = event.model || '';
-        console.log(`[CLI] Session ${event.session_id}, model: ${event.model}, tools: ${event.tools?.length || 0}`);
+        console.log(`[CLI] Session ${event.session_id}, CLI resolved model: "${event.model}"`);
+        console.log(`[CLI] User-selected model: "${thread.model}"`);
       }
       break;
     }

@@ -26,6 +26,34 @@ export interface ReloadSessionsMessage {
   type: 'reload_sessions';
 }
 
+export interface ArchiveThreadMessage {
+  type: 'archive_thread';
+  threadId: string;
+  archived: boolean;
+}
+
+export interface RenameThreadMessage {
+  type: 'rename_thread';
+  threadId: string;
+  title: string;
+}
+
+export interface ExportThreadMessage {
+  type: 'export_thread';
+  threadId: string;
+}
+
+export interface DeleteThreadMessage {
+  type: 'delete_thread';
+  threadId: string;
+}
+
+export interface PinThreadMessage {
+  type: 'pin_thread';
+  threadId: string;
+  pinned: boolean;
+}
+
 export interface ApproveToolMessage {
   type: 'approve_tool';
   threadId: string;
@@ -62,7 +90,12 @@ export type ClientMessage =
   | GetThreadMessage
   | ListModelsMessage
   | ListSkillsMessage
-  | ReloadSessionsMessage;
+  | ReloadSessionsMessage
+  | ArchiveThreadMessage
+  | RenameThreadMessage
+  | ExportThreadMessage
+  | DeleteThreadMessage
+  | PinThreadMessage;
 
 // --- Server → Client ---
 
@@ -157,6 +190,19 @@ export interface ModelsListMessage {
 export interface ThreadDetailMessage {
   type: 'thread_detail';
   thread: Thread;
+  usage?: Usage;
+}
+
+export interface ExportResponseMessage {
+  type: 'export_response';
+  threadId: string;
+  jsonl: string;
+}
+
+export interface UsageUpdateMessage {
+  type: 'usage_update';
+  threadId: string;
+  usage: Usage;
 }
 
 export interface ErrorMessage {
@@ -176,6 +222,8 @@ export type ServerMessage =
   | ToolApprovalRequiredMessage
   | ThreadsListMessage
   | ThreadDetailMessage
+  | ExportResponseMessage
   | ModelsListMessage
   | SkillsListMessage
+  | UsageUpdateMessage
   | ErrorMessage;

@@ -39,7 +39,9 @@ function updateMessages(): void {
   let html = '';
 
   for (const turn of thread.turns) {
+    html += `<div class="message-group">`;
     html += `<div class="message-bubble user">${escapeHtml(turn.userMessage)}</div>`;
+    html += `<div class="message-timestamp user-ts"><span>${formatTimestamp(turn.startedAt)}</span><button class="copy-msg-btn">复制</button></div>`;
 
     for (const item of turn.items) {
       html += renderItem(item);
@@ -48,18 +50,49 @@ function updateMessages(): void {
     if (turn.status === 'running') {
       html += `<div class="running-indicator" style="padding:8px"><span class="dot"></span><span class="dot"></span><span class="dot"></span> Agent 运行中...</div>`;
     }
+    html += `</div>`;
   }
 
   messagesDiv.innerHTML = html;
+
+  // Add copy button listeners
+  messagesDiv.querySelectorAll('.copy-msg-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Copy from the adjacent message bubble's text content
+      const wrap = (btn as HTMLElement).closest('.message-group') || (btn as HTMLElement).closest('.msg-actions-wrap');
+      const bubble = wrap?.querySelector('.message-bubble');
+      if (bubble) {
+        navigator.clipboard.writeText(bubble.textContent || '').then(() => {
+          (btn as HTMLElement).textContent = '✓';
+          setTimeout(() => { (btn as HTMLElement).textContent = '复制'; }, 1500);
+        });
+      }
+    });
+  });
 
   if (isScrolledToBottom) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
   }
 }
 
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const time = d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  if (isToday) return time;
+  return `${d.getMonth() + 1}/${d.getDate()} ${time}`;
+}
+
 function renderItem(item: any): string {
   if (item.type === 'text') {
-    return `<div class="message-bubble assistant">${formatMarkdown(item.content || '')}</div>`;
+    return `<div class="msg-actions-wrap">
+      <div class="message-bubble assistant">${formatMarkdown(item.content || '')}</div>
+      <div class="msg-actions">
+        <button class="copy-msg-btn">复制</button>
+      </div>
+    </div>`;
   }
   if (item.type === 'thinking') {
     return `<div class="tool-card">
