@@ -146,6 +146,10 @@ html, body {
     transform: translateX(0);
   }
 
+  #sidebar-header {
+    padding-top: calc(var(--spacing-md) + var(--safe-top));
+  }
+
   .sidebar-backdrop {
     position: fixed;
     inset: 0;
