@@ -157,7 +157,7 @@ html, body {
 /* Status Bar */
 #status-bar {
   flex-shrink: 0;
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: var(--safe-top) var(--spacing-md) var(--spacing-sm);
   background: var(--bg-secondary);
   display: flex;
   align-items: center;

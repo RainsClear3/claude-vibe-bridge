@@ -1,9 +1,9 @@
 
-# Claude Vibe Bridge 认证功能设置指南
+# Claude Anywhere 认证功能设置指南
 
 ## 🔐 认证功能已启用！
 
-恭喜！你的 Claude Vibe Bridge 现在受密码保护了！
+恭喜！你的 Claude Anywhere 现在受密码保护了！
 
 ---
 

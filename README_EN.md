@@ -1,4 +1,4 @@
-# Claude Vibe Bridge
+# Claude Anywhere
 
 [中文版](README.md)
 
@@ -29,6 +29,24 @@ Phone/Browser ──WebSocket──> Server (Express) ──spawn──> claude.
 - **Windows** with [Claude Desktop](https://claude.ai/download) installed
 - Claude Desktop must have **3P mode enabled** (Settings > Developer > Third-party API)
 - **Node.js 18+**
+- [cc-switch](https://github.com/farion1231/cc-switch) for managing third-party API configurations. cc-switch is a cross-platform desktop app that lets you manage multiple API providers in one place and switch between them with a single click. When switching, cc-switch automatically writes the corresponding `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, etc. into the `env` field of `~/.claude/settings.json`. `claude.exe` reads this file at startup to connect to the third-party API. This project does not modify this configuration file — it relies on cc-switch for config management.
+
+  Key environment variables in `~/.claude/settings.json`:
+
+  ```json
+  {
+    "env": {
+      "ANTHROPIC_BASE_URL": "https://your-api-provider.com",
+      "ANTHROPIC_AUTH_TOKEN": "your-api-key",
+      "ANTHROPIC_DEFAULT_SONNET_MODEL": "your-model-name",
+      "ANTHROPIC_DEFAULT_SONNET_1M_MODEL": "your-model-name[1M]",
+      "ANTHROPIC_DEFAULT_OPUS_MODEL": "your-model-name-pro",
+      "ANTHROPIC_DEFAULT_OPUS_1M_MODEL": "your-model-name-pro[1M]",
+      "ANTHROPIC_DEFAULT_HAIKU_MODEL": "your-model-name-lite",
+      "ANTHROPIC_DEFAULT_HAIKU_1M_MODEL": "your-model-name-lite[1M]"
+    }
+  }
+  ```
 
 ## Quick Start
 

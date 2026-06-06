@@ -1,5 +1,5 @@
 
-# Claude Vibe Bridge 内网穿透部署指南
+# Claude Anywhere 内网穿透部署指南
 
 ## 方案概览
 
@@ -116,7 +116,7 @@ frpc -c frpc.toml
 
 ## 四、启动 Vibe Bridge
 
-在内网电脑上正常启动你的 Claude Vibe Bridge：
+在内网电脑上正常启动你的 Claude Anywhere：
 
 ```bash
 npm run dev:server

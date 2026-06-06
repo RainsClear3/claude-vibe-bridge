@@ -31,7 +31,7 @@ function authMiddleware(req: express.Request, res: express.Response, next: expre
   if (checkAuth(req.headers.authorization)) {
     next();
   } else {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Claude Vibe Bridge"');
+    res.setHeader('WWW-Authenticate', 'Basic realm="Claude Anywhere"');
     res.status(401).send('Authentication required');
   }
 }
@@ -92,24 +92,24 @@ async function main() {
 
   server.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
-      console.error(`[Claude Vibe Bridge] Port ${config.port} is already in use. Kill the existing process first:`);
+      console.error(`[Claude Anywhere] Port ${config.port} is already in use. Kill the existing process first:`);
       console.error(`  netstat -ano | findstr :${config.port}`);
       console.error(`  taskkill /F /PID <PID>`);
     } else {
-      console.error('[Claude Vibe Bridge] Server error:', err.message);
+      console.error('[Claude Anywhere] Server error:', err.message);
     }
     process.exit(1);
   });
 
   server.listen(config.port, '0.0.0.0', () => {
-    console.log(`[Claude Vibe Bridge] Server running on http://0.0.0.0:${config.port}`);
-    console.log(`[Claude Vibe Bridge] Mode: Transparent bridge to Claude Desktop 3P`);
-    console.log(`[Claude Vibe Bridge] Allowed dirs: ${config.allowedDirs.join(', ')}`);
-    console.log(`[Claude Vibe Bridge] Open on phone: http://<your-ip>:${config.port}`);
+    console.log(`[Claude Anywhere] Server running on http://0.0.0.0:${config.port}`);
+    console.log(`[Claude Anywhere] Mode: Transparent bridge to Claude Desktop 3P`);
+    console.log(`[Claude Anywhere] Allowed dirs: ${config.allowedDirs.join(', ')}`);
+    console.log(`[Claude Anywhere] Open on phone: http://<your-ip>:${config.port}`);
   });
 }
 
 main().catch(err => {
-  console.error('[Claude Vibe Bridge] Fatal:', err);
+  console.error('[Claude Anywhere] Fatal:', err);
   process.exit(1);
 });

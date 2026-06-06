@@ -1,4 +1,4 @@
-# Claude Vibe Bridge
+# Claude Anywhere
 
 [English](README_EN.md)
 
@@ -29,6 +29,24 @@
 - **Windows** 系统，已安装 [Claude Desktop](https://claude.ai/download)
 - Claude Desktop 需要启用 **3P 模式**（设置 > 开发者 > 第三方 API）
 - **Node.js 18+**
+- 需要 [cc-switch](https://github.com/farion1231/cc-switch) 来管理第三方 API 配置。cc-switch 是一个跨平台桌面应用，可将多个 API 供应商（provider）的配置统一管理，并一键切换当前生效的供应商。切换时，cc-switch 会自动将对应的 `ANTHROPIC_BASE_URL`、`ANTHROPIC_AUTH_TOKEN` 等写入 `~/.claude/settings.json` 的 `env` 字段。`claude.exe` 启动时会读取该文件来连接第三方 API。本项目本身不修改此配置文件，依赖 cc-switch 完成配置管理。
+
+  `~/.claude/settings.json` 中的关键环境变量：
+
+  ```json
+  {
+    "env": {
+      "ANTHROPIC_BASE_URL": "https://your-api-provider.com",
+      "ANTHROPIC_AUTH_TOKEN": "your-api-key",
+      "ANTHROPIC_DEFAULT_SONNET_MODEL": "your-model-name",
+      "ANTHROPIC_DEFAULT_SONNET_1M_MODEL": "your-model-name[1M]",
+      "ANTHROPIC_DEFAULT_OPUS_MODEL": "your-model-name-pro",
+      "ANTHROPIC_DEFAULT_OPUS_1M_MODEL": "your-model-name-pro[1M]",
+      "ANTHROPIC_DEFAULT_HAIKU_MODEL": "your-model-name-lite",
+      "ANTHROPIC_DEFAULT_HAIKU_1M_MODEL": "your-model-name-lite[1M]"
+    }
+  }
+  ```
 
 ## 快速开始
 
