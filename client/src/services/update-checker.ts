@@ -30,13 +30,11 @@ interface CachedUpdate {
   error?: string;
 }
 
-/** Read the bundled app version from Capacitor config (set in capacitor.config.ts). */
+/** Read the bundled app version. Vite injects it at build time from
+ *  capacitor.config.ts (see vite.config.ts `define` option). */
 export function getCurrentVersion(): string {
-  // Capacitor injects the config as a global; fall back to package.json field
-  // for browser/dev usage.
-  const cap = (window as any).Capacitor;
-  const fromCap = cap?.config?.version;
-  if (fromCap) return String(fromCap);
+  const injected = (globalThis as any).__APP_VERSION__;
+  if (typeof injected === 'string' && injected.length > 0) return injected;
   return '0.0.0';
 }
 

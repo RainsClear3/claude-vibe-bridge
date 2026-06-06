@@ -42,7 +42,7 @@ Forwarding  https://xyz.ngrok-free.dev -&gt; http://localhost:3900
 
 ## 注意事项
 
-- 免费版每次重启 ngrok，域名都会变
+- ngrok给每个账号一个免费固定域名，每次重启隧道后域名不会改变
 - 国外服务器，国内速度可能一般
 - 适合快速测试验证
 
