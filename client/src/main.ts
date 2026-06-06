@@ -6,6 +6,7 @@ import { initStatusBar, renderStatusBar } from './components/status-bar.js';
 import { renderChatView } from './views/chat-view.js';
 import { renderInputBar } from './components/input-bar.js';
 import { renderThreadList } from './views/thread-list.js';
+import { startAutoUpdateCheck, runUpdateCheck } from './components/update-banner.js';
 import type { ServerMessage } from '@vibe-bridge/shared';
 
 let wsClient: WsClient | null = null;
@@ -282,6 +283,9 @@ function initApp(): void {
       wsClient.connect();
     }
   });
+
+  // Periodic in-app update check (GitHub releases)
+  startAutoUpdateCheck();
 
   // Expose for components
   (window as any).__wsClient = wsClient;

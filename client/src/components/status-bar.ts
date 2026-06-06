@@ -1,5 +1,7 @@
 import { store, THEMES } from '../state/store.js';
 import type { WsClient } from '../services/ws-client.js';
+import { runUpdateCheck, getLastLatestVersion } from './update-banner.js';
+import { getCurrentVersion } from '../services/update-checker.js';
 
 let wsClient: WsClient | null = null;
 
@@ -109,6 +111,29 @@ export function renderStatusBar(): void {
       window.location.reload();
     });
   }
+
+  // Update check button
+  let updateBtn = el.querySelector('.update-check-btn') as HTMLButtonElement | null;
+  if (!updateBtn) {
+    updateBtn = document.createElement('button');
+    updateBtn.className = 'update-check-btn';
+    updateBtn.title = `检查更新 (当前 v${getCurrentVersion()})`;
+    updateBtn.textContent = '↑';
+    el.appendChild(updateBtn);
+
+    updateBtn.addEventListener('click', async () => {
+      updateBtn!.disabled = true;
+      updateBtn!.textContent = '…';
+      try {
+        await runUpdateCheck(true);
+      } finally {
+        updateBtn!.disabled = false;
+        updateBtn!.textContent = '↑';
+        updateBtn!.classList.toggle('has-update', !!getLastLatestVersion());
+      }
+    });
+  }
+  updateBtn.classList.toggle('has-update', !!getLastLatestVersion());
 }
 
 function showUsagePopup(usage: { inputTokens: number; outputTokens: number; model?: string }): void {
