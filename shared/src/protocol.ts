@@ -3,12 +3,22 @@
 
 import type { Thread, Turn, Item, ItemDelta, Usage, ThreadSummary } from './session.js';
 
-// --- Client → Server ---
+// === Client → Server ---
+
+/** Attached image for user message */
+export interface ImageAttachment {
+  /** MIME type, e.g. "image/jpeg", "image/png", "image/gif", "image/webp" */
+  mediaType: string;
+  /** Base64-encoded data (without the `data:` prefix) */
+  data: string;
+}
 
 export interface SubmitTaskMessage {
   type: 'submit_task';
   threadId?: string;    // If omitted, create new thread
   content: string;
+  /** Optional images to attach to the user message */
+  images?: ImageAttachment[];
   cwd?: string;         // Working directory (for new threads)
   model?: string;       // Override model (for new threads)
   effort?: string;      // Override effort level (for new threads): low|medium|high|xhigh|max

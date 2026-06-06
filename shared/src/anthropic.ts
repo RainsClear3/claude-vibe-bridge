@@ -27,6 +27,7 @@ export interface MessageParam {
 
 export type ContentBlock =
   | TextBlock
+  | ImageBlock
   | ToolUseBlock
   | ToolResultBlock
   | ThinkingBlock;
@@ -34,6 +35,24 @@ export type ContentBlock =
 export interface TextBlock {
   type: 'text';
   text: string;
+}
+
+export interface ImageBlock {
+  type: 'image';
+  source: ImageSource;
+}
+
+export type ImageSource = Base64ImageSource | UrlImageSource;
+
+export interface Base64ImageSource {
+  type: 'base64';
+  media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+  data: string;
+}
+
+export interface UrlImageSource {
+  type: 'url';
+  url: string;
 }
 
 export interface ThinkingBlock {

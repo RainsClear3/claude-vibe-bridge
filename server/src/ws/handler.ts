@@ -131,13 +131,14 @@ export function handleMessage(
 }
 
 async function handleSubmitTask(
-  msg: { type: 'submit_task'; threadId?: string; content: string; cwd?: string; model?: string; effort?: string },
+  msg: Extract<ClientMessage, { type: 'submit_task' }>,
   sessionManager: SessionManager,
 ): Promise<void> {
   try {
     await sessionManager.submitTask({
       threadId: msg.threadId,
       content: msg.content,
+      images: msg.images,
       cwd: msg.cwd || config.allowedDirs[0],
       model: msg.model || config.defaultModel,
       effort: msg.effort,

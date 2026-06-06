@@ -8,6 +8,15 @@ data/
 *.txt
 .trae/
 android/.idea/
+android/.local-sdk/
 android/app/build/
 android/build/
 *.tsbuildinfo
+
+# Development scratch files (multi-modal research)
+ci_logs/
+ci_logs_extract/
+test-cli-*.mjs
+test-extract-*.mjs
+list-files.ps1
+extracted.*

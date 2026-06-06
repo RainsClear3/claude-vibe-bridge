@@ -2,7 +2,7 @@ import { spawn, execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuid } from 'uuid';
-import type { Thread, Turn, Item } from '@vibe-bridge/shared';
+import type { Thread, Turn, Item, ImageAttachment } from '@vibe-bridge/shared';
 import { broadcast } from '../ws/broadcast.js';
 import { config, getAliasToFullModelMap, getCliEnvVars, resolveClaudeModelName } from '../config.js';
 import { persistUsage } from '../session/usage-persistence.js';
@@ -101,6 +101,7 @@ export interface CliRunnerParams {
   thread: Thread;
   turn: Turn;
   content: string;
+  images?: ImageAttachment[];
   cwd: string;
   sessionId?: string;
   model?: string;
@@ -187,8 +188,13 @@ export async function runCliAgent(params: CliRunnerParams): Promise<void> {
   const skill = resolveSkill(rawContent);
   const content = skill ? skill.cleanContent : rawContent;
 
+  // Use stdin with stream-json input format. This is required to support
+  // image attachments (image content blocks in the user message) — the
+  // CLI's `-p <value>` mode does not accept structured content.
+  // Each line of stdin is a JSON object representing one message.
   const args = [
-    '-p', content,
+    '--print',
+    '--input-format', 'stream-json',
     '--output-format', 'stream-json',
     '--verbose',
     '--dangerously-skip-permissions',
@@ -210,12 +216,33 @@ export async function runCliAgent(params: CliRunnerParams): Promise<void> {
     args.push('--effort', params.effort);
   }
 
+  // Build the user message: a single stream-json line with the (possibly
+  // multimodal) content. The trailing newline terminates the message.
+  const userContent: any[] = [];
+  if (params.images && params.images.length > 0) {
+    for (const img of params.images) {
+      userContent.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: img.mediaType,
+          data: img.data,
+        },
+      });
+    }
+  }
+  userContent.push({ type: 'text', text: content || ' ' });
+
+  const streamJsonInput =
+    JSON.stringify({ type: 'user', message: { role: 'user', content: userContent } }) + '\n';
+
   broadcast({ type: 'turn_started', threadId: thread.id, turnId: turn.id, userMessage: content });
 
   const cliCwd = findCliCwd(cwd);
 
   console.log(`[CLI] Running: ${CLI_PATH} ${args.join(' ')}`);
   console.log(`[CLI] CWD: ${cliCwd}`);
+  console.log(`[CLI] Input: ${userContent.length} blocks, ${streamJsonInput.length} bytes (${(streamJsonInput.length / 1024).toFixed(1)} KB)`);
 
   // Merge CLI env vars (ANTHROPIC_DEFAULT_*_MODEL from settings.json env field)
   // so CLI can resolve aliases to the correct proxy model names.
@@ -230,6 +257,15 @@ export async function runCliAgent(params: CliRunnerParams): Promise<void> {
     windowsHide: true,
     env: procEnv,
   });
+
+  // Write the stream-json user message to stdin, then close it to signal
+  // end-of-input. The CLI processes the message and streams the response.
+  try {
+    proc.stdin!.write(streamJsonInput, 'utf-8');
+    proc.stdin!.end();
+  } catch (err: any) {
+    console.log(`[CLI] Failed to write to stdin: ${err.message}`);
+  }
 
   abortSignal.addEventListener('abort', () => {
     // Windows doesn't support SIGTERM — use taskkill to kill the process tree

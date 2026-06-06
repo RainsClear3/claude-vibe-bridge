@@ -26,6 +26,20 @@ export interface SkillInfo {
   description: string;
 }
 
+/** Image attached to the input box, waiting to be sent with the next message. */
+export interface AttachedImage {
+  /** Local id for DOM keys */
+  id: string;
+  /** MIME type, e.g. "image/png" */
+  mediaType: string;
+  /** Base64-encoded data (no data: prefix) */
+  data: string;
+  /** Data URL for preview (e.g. "data:image/png;base64,iVBOR...") */
+  preview: string;
+  /** Original filename for accessibility */
+  filename: string;
+}
+
 export type ThemeId = 'default' | 'light' | 'cyberpunk' | 'minimal' | 'forest';
 
 export interface ThemeInfo {
@@ -55,6 +69,7 @@ export interface AppState {
   selectedModel: string | null;
   selectedEffort: string | null;
   selectedSkill: string;
+  attachedImages: AttachedImage[];
   currentTheme: ThemeId;
   statusFilter: 'active' | 'all' | 'archived';
   searchQuery: string;
@@ -77,6 +92,7 @@ class Store {
     selectedModel: null,
     selectedEffort: 'max',
     selectedSkill: '',
+    attachedImages: [],
     currentTheme: (localStorage.getItem('vb-theme') as ThemeId) || 'default',
     statusFilter: 'all' as const,
     searchQuery: '',
@@ -197,6 +213,23 @@ class Store {
 
   setSearchQuery(query: string): void {
     this.state.searchQuery = query;
+    this.notify();
+  }
+
+  // --- Attached images (input box) ---
+
+  addAttachedImage(img: AttachedImage): void {
+    this.state.attachedImages.push(img);
+    this.notify();
+  }
+
+  removeAttachedImage(id: string): void {
+    this.state.attachedImages = this.state.attachedImages.filter(i => i.id !== id);
+    this.notify();
+  }
+
+  clearAttachedImages(): void {
+    this.state.attachedImages = [];
     this.notify();
   }
 

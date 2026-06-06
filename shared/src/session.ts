@@ -28,7 +28,7 @@ export interface Turn {
 export interface Item {
   id: string;
   turnId: string;
-  type: 'text' | 'thinking' | 'tool_use' | 'tool_result' | 'error';
+  type: 'text' | 'thinking' | 'tool_use' | 'tool_result' | 'error' | 'image';
   // For text/thinking: accumulated from deltas
   content?: string;
   // For tool_use:
@@ -37,6 +37,9 @@ export interface Item {
   // For tool_result:
   toolResultContent?: string;
   toolResultIsError?: boolean;
+  // For image: base64-encoded image data from user message content
+  imageMediaType?: string;   // e.g. "image/webp", "image/jpeg", "image/png", "image/gif"
+  imageData?: string;        // base64 string (no data: prefix)
   // Metadata
   createdAt: number;
   completedAt?: number;

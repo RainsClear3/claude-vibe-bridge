@@ -252,6 +252,17 @@ function initApp(): void {
     renderStatusBar();
   });
 
+  // Re-render input bar when attached images change (so thumbnails show/hide).
+  // We use a snapshot of the array length to detect changes.
+  let lastAttachedCount = store.state.attachedImages.length;
+  store.subscribe(() => {
+    const cur = store.state.attachedImages.length;
+    if (cur !== lastAttachedCount) {
+      lastAttachedCount = cur;
+      renderInputBar(wsClient!);
+    }
+  });
+
   // Apply saved theme
   const savedTheme = localStorage.getItem('vb-theme') || 'default';
   store.setTheme(savedTheme as any);

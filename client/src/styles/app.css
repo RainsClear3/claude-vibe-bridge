@@ -1131,6 +1131,198 @@ html, body {
   gap: 2px;
 }
 
+/* === P0: User Input Group (image grid + text bubble) === */
+.user-input-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  align-self: flex-end;
+  max-width: 85%;
+}
+
+/* === P0: User Image Items === */
+.user-image-item {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  cursor: zoom-in;
+  transition: transform 0.15s, box-shadow 0.15s;
+  max-width: 240px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.user-image-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+}
+
+.user-image-thumb {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+/* When the user-input-group has multiple images, render them as a 2- or 3-col grid */
+.user-input-group:has(.user-image-item:nth-child(2):last-child) .user-image-item,
+.user-input-group:has(.user-image-item:nth-child(3):last-child) .user-image-item,
+.user-input-group:has(.user-image-item:nth-child(4):last-child) .user-image-item {
+  max-width: 180px;
+}
+
+.user-input-group:not(:has(.user-image-item:nth-child(2))) {
+  align-items: flex-end;
+}
+
+/* When group has more than 1 image, switch to a wrapping flex row */
+.user-input-group:has(.user-image-item:nth-child(2)) {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 360px;
+}
+
+/* === Image Lightbox === */
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 24px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  cursor: zoom-out;
+}
+
+.image-lightbox.open {
+  opacity: 1;
+}
+
+.image-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+
+.image-lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.image-lightbox-close:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* === Image Attach (Input Bar) === */
+#attach-image-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s;
+}
+
+#attach-image-btn:hover {
+  background: var(--bg-tertiary);
+  transform: scale(1.05);
+}
+
+#attach-image-btn:active {
+  transform: scale(0.95);
+}
+
+.attached-images-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  align-items: center;
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.attached-image {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+}
+
+.attached-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.attached-image-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.attached-image-remove:hover {
+  background: rgba(220, 38, 38, 0.95);
+}
+
+.attached-images-count {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 0 4px;
+}
+
 .message-timestamp {
   font-size: 11px;
   color: var(--text-muted);

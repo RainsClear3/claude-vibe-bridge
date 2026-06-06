@@ -40,10 +40,24 @@ function updateMessages(): void {
 
   for (const turn of thread.turns) {
     html += `<div class="message-group">`;
-    html += `<div class="message-bubble user">${escapeHtml(turn.userMessage)}</div>`;
+
+    // Split user-input items (images) from assistant items, so images can be
+    // grouped visually with the user text bubble on the right side.
+    const imageItems = turn.items.filter((i: any) => i.type === 'image');
+    const otherItems = turn.items.filter((i: any) => i.type !== 'image');
+
+    html += `<div class="user-input-group">`;
+    for (const img of imageItems) {
+      html += renderItem(img);
+    }
+    if (turn.userMessage || imageItems.length === 0) {
+      html += `<div class="message-bubble user">${escapeHtml(turn.userMessage || '')}</div>`;
+    }
+    html += `</div>`;
+
     html += `<div class="message-timestamp user-ts"><span>${formatTimestamp(turn.startedAt)}</span><button class="copy-msg-btn">复制</button></div>`;
 
-    for (const item of turn.items) {
+    for (const item of otherItems) {
       html += renderItem(item);
     }
 
@@ -71,9 +85,58 @@ function updateMessages(): void {
     });
   });
 
+  // Add image click listeners → open lightbox
+  messagesDiv.querySelectorAll('.user-image-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const el = item as HTMLElement;
+      const img = el.querySelector('img') as HTMLImageElement | null;
+      if (img?.src) openImageLightbox(img.src);
+    });
+  });
+
   if (isScrolledToBottom) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
   }
+}
+
+/**
+ * Open a full-size image lightbox. Builds the element on demand and inserts
+ * it into <body> so it overlays the entire viewport.
+ */
+function openImageLightbox(src: string): void {
+  // Remove any existing lightbox
+  const existing = document.getElementById('image-lightbox');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'image-lightbox';
+  overlay.className = 'image-lightbox';
+  overlay.innerHTML = `
+    <button class="image-lightbox-close" title="关闭">✕</button>
+    <img class="image-lightbox-img" src="${src}" alt="全屏图片" />
+  `;
+  document.body.appendChild(overlay);
+
+  // Force reflow then add 'open' class for animation
+  requestAnimationFrame(() => overlay.classList.add('open'));
+
+  const close = () => {
+    overlay.classList.remove('open');
+    setTimeout(() => overlay.remove(), 180);
+    document.removeEventListener('keydown', onKey);
+  };
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') close();
+  };
+
+  overlay.addEventListener('click', (e) => {
+    // Click outside the image (on backdrop) closes
+    if (e.target === overlay || (e.target as HTMLElement).classList.contains('image-lightbox-close')) {
+      close();
+    }
+  });
+  document.addEventListener('keydown', onKey);
 }
 
 function formatTimestamp(ts: number): string {
@@ -92,6 +155,13 @@ function renderItem(item: any): string {
       <div class="msg-actions">
         <button class="copy-msg-btn">复制</button>
       </div>
+    </div>`;
+  }
+  if (item.type === 'image') {
+    const mediaType = item.imageMediaType || 'image/jpeg';
+    const data = item.imageData || '';
+    return `<div class="user-image-item">
+      <img class="user-image-thumb" src="data:${mediaType};base64,${data}" alt="用户上传的图片" loading="lazy" />
     </div>`;
   }
   if (item.type === 'thinking') {

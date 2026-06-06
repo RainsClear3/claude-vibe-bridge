@@ -49,6 +49,25 @@ function extractTextFromContent(content: any): string {
   return '';
 }
 
+/**
+ * Extract base64 image blocks from a user message content array.
+ * Returns an array of { media_type, data } suitable for ImageBlock.
+ */
+function extractImagesFromContent(content: any): Array<{ media_type: string; data: string }> {
+  if (!content || !Array.isArray(content)) return [];
+  return content
+    .filter((b: any) =>
+      b.type === 'image' &&
+      b.source?.type === 'base64' &&
+      typeof b.source.data === 'string' &&
+      b.source.data.length > 0
+    )
+    .map((b: any) => ({
+      media_type: b.source.media_type || 'image/jpeg',
+      data: b.source.data,
+    }));
+}
+
 function extractBlocksFromContent(content: any): any[] {
   if (!content || !Array.isArray(content)) return [];
   return content.filter((b: any) => {
@@ -119,20 +138,36 @@ function parseJsonlToThread(meta: ClaudeSessionMeta, jsonlPath: string): Thread 
     if (msg.type === 'user') {
       const content = msg.message?.content;
       const text = extractTextFromContent(content);
+      const images = extractImagesFromContent(content);
       if (text && /^<(summary|local-command|command-name|task-notification|task-updated)|^\[Request interrupted/.test(text.trim())) {
         continue;
       }
       const hasText = hasTextContent(content);
+      const hasImages = images.length > 0;
 
-      if (hasText) {
+      if (hasText || hasImages) {
         currentTurn = {
           id: uuid(),
           threadId: thread.id,
-          userMessage: extractTextFromContent(content),
+          userMessage: text,
           items: [],
           status: 'completed',
           startedAt: msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now(),
         };
+
+        // Add image items (only for user messages — Claude doesn't send back base64 images in assistant turns)
+        for (const img of images) {
+          currentTurn.items.push({
+            id: uuid(),
+            turnId: currentTurn.id,
+            type: 'image',
+            imageMediaType: img.media_type,
+            imageData: img.data,
+            createdAt: currentTurn.startedAt,
+            completedAt: currentTurn.startedAt,
+          });
+        }
+
         thread.turns.push(currentTurn);
       }
 
@@ -532,11 +567,12 @@ export class SessionManager {
   async submitTask(params: {
     threadId?: string;
     content: string;
+    images?: Array<{ mediaType: string; data: string }>;
     cwd: string;
     model: string;
     effort?: string;
   }): Promise<void> {
-    const { content, cwd, model, effort } = params;
+    const { content, images, cwd, model, effort } = params;
     const now = Date.now();
 
     // Get or create thread
@@ -577,12 +613,40 @@ export class SessionManager {
     };
     thread.turns.push(turn);
 
+    // Add image items to the turn (so they show up in the chat immediately)
+    if (images && images.length > 0) {
+      for (const img of images) {
+        const imageItem: Item = {
+          id: uuid(),
+          turnId: turn.id,
+          type: 'image',
+          imageMediaType: img.mediaType,
+          imageData: img.data,
+          createdAt: Date.now(),
+          completedAt: Date.now(),
+        };
+        turn.items.push(imageItem);
+        broadcast({
+          type: 'item_created',
+          threadId: thread.id,
+          turnId: turn.id,
+          item: imageItem,
+        });
+        broadcast({
+          type: 'item_completed',
+          threadId: thread.id,
+          turnId: turn.id,
+          itemId: imageItem.id,
+        });
+      }
+    }
+
     // Setup abort controller
     const abortController = new AbortController();
     this.abortControllers.set(thread.id, abortController);
 
     try {
-      await this.runAgentLoop(thread, turn, abortController.signal, model, effort);
+      await this.runAgentLoop(thread, turn, abortController.signal, model, effort, images);
     } catch (err) {
       turn.status = 'error';
       turn.completedAt = Date.now();
@@ -638,6 +702,7 @@ export class SessionManager {
     abortSignal: AbortSignal,
     model?: string,
     effort?: string,
+    images?: Array<{ mediaType: string; data: string }>,
   ): Promise<void> {
     const { runCliAgent } = await import('../agent/cli-runner.js');
     // Use explicit model first, then the thread's stored model (normalized alias),
@@ -658,6 +723,7 @@ export class SessionManager {
       thread,
       turn,
       content: turn.userMessage,
+      images,
       cwd: thread.cwd,
       sessionId: (thread as any)._cliSessionId,
       model: effectiveModel,
